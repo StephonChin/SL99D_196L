@@ -22,6 +22,7 @@ typedef enum{
 	
     //WIFI_CMD_TO_CONNECT   ,         	//直接连接一个特定的WIFI
     WIFI_CMD_APP_UART_SEND_RQ = 0x50,  // 串口透传.
+    WIFI_CMD_APP_IO_CTL_RQ = 0x51,  // io控制.
     WIFI_CMD_APP_LED_TWINKLE_RQ = 0x61,  // supper twinkle.
     
     

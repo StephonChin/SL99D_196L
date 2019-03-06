@@ -1300,7 +1300,7 @@ static M2M_Return_T _net_recv_handle_without_session
         goto NO_SESSION_HANDLE_END;
     }
 	
-	m2m_debug_level( M2M_LOG,"No token cmd is %d", p_dec->cmd);
+	m2m_debug_level( M2M_LOG_DEBUG,"No token cmd is %d", p_dec->cmd);
     switch( p_dec->cmd){
         case M2M_PROTO_CMD_PING_RQ:
             // 更新 路由列表
@@ -1633,7 +1633,7 @@ static M2M_Return_T _net_recv_master_hanel(
                 _SESSION_STA_SET_TOKEN(p_s);
                 // all unsending node will be send in next trysync 
                 _session_update_sendtime(p_s);
-                m2m_debug_level( M2M_LOG,"net <%p> (%p) receive client token = %x.", p_net, p_s, p_s->ctoken);
+                m2m_debug_level( M2M_LOG_DEBUG,"net <%p> (%p) receive client token = %x.", p_net, p_s, p_s->ctoken);
             }
             // 回调
             _USERFUNC_(p_node,p_dec,ret);
@@ -2041,13 +2041,16 @@ static M2M_Return_T net_request_send(Net_T *p_net, Net_request_node_T *p_el){
 static M2M_Return_T net_request_retransmit(Net_T *p_net){
     Net_request_node_T *p_hd, *p_el, *p_tmp;
     int ret = 0;
+	static u32 last_radio_rq_tm = 0;
     
     LL_FOREACH_SAFE(p_net->p_request_hd, p_el, p_tmp){
 
         // 不重发 广播包.
 #ifdef CONF_BROADCAST_ENABLE
         if(p_el->cmd == M2M_PROTO_CMD_BROADCAST_RQ ){
+			if(DIFF_(last_radio_rq_tm,  m2m_current_time_get()) > NET_RADIO_RQ_INV_MS)
             ret = net_request_send(p_net, p_el);
+			last_radio_rq_tm = m2m_current_time_get();
             }else
 #endif // CONF_BROADCAST_ENABLE
             { // 非广播包.

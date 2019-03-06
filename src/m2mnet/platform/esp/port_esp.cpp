@@ -321,7 +321,6 @@ void local_ip_save(void){
 	else 
 		sprintf((char*)local_ip,"%u.%u.%u.%u",WiFi.localIP()[0],WiFi.localIP()[1],WiFi.localIP()[2],WiFi.localIP()[3]);
     m2m_log("local ip %s\n", (char*)local_ip);
-	
 }
 u8 *getlocal_ip(void){
     return local_ip;

@@ -73,11 +73,19 @@
 										}while(0)
 
 #endif
+
+#define STR_2_HEX_ARRAY_INV(d,dlen,s, slen) do{ int i,j; \
+									 for( i=dlen -1, j=slen-1; j>=0;j--){ u8 h,l; \
+										CHAR_2_INT(l,s[j]);j--; \
+										if(j >= 0){CHAR_2_INT(h,s[j]); d[i] = 16 * h + l;}\
+										else{ d[i] = l; break;} \
+										i--;} }while(0)
+
 #define HEX_2_CHAR(c,n)	c = (n >= 10)?(n-10+'a'):(n + '0');
 #define HEX_2_STR(d,s,len)	do{	int i,j;for(i=0,j=0;i<len;i++,j++){\
 									d[j] =s[i]/16; HEX_2_CHAR(d[j],d[j]);j++;d[j] = s[i]%16; HEX_2_CHAR(d[j],d[j]);}\
 								}while(0)
-#define HEX_2_STR_CONV(d,s,len)	do{	int i,j;for(i=len-1,j=0;i>=0;i--,j++){\
+#define HEX_2_STR(d,s,len)	do{	int i,j;for(i=len-1,j=0;i>=0;i--,j++){\
 										d[j] =s[i]/16; HEX_2_CHAR(d[j],d[j]);j++;d[j] = s[i]%16; HEX_2_CHAR(d[j],d[j]);}\
 									}while(0)
 

@@ -543,6 +543,7 @@ void Key_Process(void)
 		{
 			cntdwn_data.cntdwn_hour++;
 			if (cntdwn_data.cntdwn_hour > 8)	cntdwn_data.cntdwn_hour = 0;
+			cntdwn_data.init = true;
 		}
 	}
 }

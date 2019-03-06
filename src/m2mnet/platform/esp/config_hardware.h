@@ -24,10 +24,9 @@ extern "C"{
 #define REST_PIN	5// 5
 #define TEST_PIN	4
 
-#define SOFTAP_SSID_	"ShowTree_"
+#define SOFTAP_SSID_	"ShowTree"
 #define EEPROM_CONF_ADDRESS (0)
 #define EEPROM_CONF_SIZE_MX (512)
-
 
 #define RESTADDR  (400)
 #define SMARTADDR  (350)

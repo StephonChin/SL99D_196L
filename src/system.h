@@ -30,14 +30,12 @@ extern "C"{
 
 typedef enum SYS_CNN_STATUS{
 
-	SYS_CNN_CONFIGING_STA,
-	SYS_CNN_CONFIGING_AP,
-	SYS_CNN_ON_AP,
-	SYS_CNN_LOST_CONNECT,
-	SYS_CNN_OFFLINE,
-	SYS_CNN_ONLINE,
-	SYS_CNN_OTAING,
-	
+   	SYS_CNN_CONFIGING_AP, 
+    SYS_CNN_CONFIGING_STA ,  //1
+    SYS_CNN_LOST_CONNECT ,   //??ик?  ?e
+   	SYS_CNN_OTAING, 
+    SYS_CNN_ONLINE,         //?и▓??ивив
+
 	SYS_CNN_MAX
 }SYS_cnn_status;
 typedef struct SYS_HOST_INFO{

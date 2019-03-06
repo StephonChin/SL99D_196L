@@ -354,8 +354,10 @@ M2M_Return_T m2m_session_secret_set(M2M_T *p_m2m,int len,u8 *p_data,m2m_func fun
 *****************************************************/
 M2M_Return_T m2m_broadcast_data_start(size_t        p,int port,int len,u8 *p_data,m2m_func func, void *p_args){
     int ret = 0;
-    if( !p || len ==0 || !p_data )
+    if( !p  ){
+		m2m_log_error("NULL net %p", p);
         return M2M_ERR_INVALID;
+    	}
     
     Net_Args_T arg;
     Net_T *p_n = (Net_T*) p;

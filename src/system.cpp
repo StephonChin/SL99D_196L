@@ -26,6 +26,7 @@
 #include "m2mnet/include/m2m_log.h"
 #include "m2mnet/include/m2m_api.h"
 #include "m2mnet/include/m2m_app.h"
+#include "m2mnet/include/m2m_port.h"
 
 #include "lights_control/leddrv/ws2812_dma.h"
 #include "system.h"
@@ -55,7 +56,7 @@ typedef enum LESP_WIFI_MODE_T{
 typedef struct EEPROM_CONF_T{
 	u8 ver_mak;	// version and mark that identify if the eeprom have been init. 
 	u8 wifi_mod;
-	u8 reseted;
+	u8 reset_cnt;	// 重启计数器.
 	u8 ssidlen;
 	u8 pwlen;
 	u8 p_ssid_pw[64];
@@ -125,6 +126,7 @@ void sys_gpio_init(void){
 	pinMode(REST_PIN, OUTPUT);
 	analogWrite(REST_PIN, 1);
 	pinMode(REST_PIN, INPUT);
+	pinMode(LED_WIFI_CONN_PIN, OUTPUT);
 }
 static void sys_broadcast_set(BOOL status){
 	en_broadcast = status;
@@ -137,7 +139,7 @@ BOOL sys_broadcast_enable(void){
 void sys_wifi_init(void){
 	int ret = 0;
 	char r[3], w[3];
-	sys_broadcast_set(FALSE);
+	sys_broadcast_set(TRUE);
 	switch( sys_conf.wifi_mod ){
 		
 		case WIFI_MODE_RST_SMT:
@@ -179,7 +181,7 @@ void sys_wifi_init(void){
 				u8 *p = NULL;
 				u8 ssid[32];
 				u8 pw[32];
-				
+				u32 old_time = m2m_current_time_get();
 				mmemset(ssid, 0, 32);				
 				mmemset(pw, 0, 32);
 
@@ -193,12 +195,15 @@ void sys_wifi_init(void){
 				//m2m_bytes_dump((u8*)"password  is ", pw, (int)sys_conf.pwlen);
 				
 				WiFi.begin((const char*)ssid, (const char*)pw);
+				
 				while (WiFi.status() != WL_CONNECTED){ // Wait for the Wi-Fi to connect
 				    delay(50);
-					
-					application_wifi_connet_loop();
 				    //Serial.print('.');
 					sys_factory_reset();
+					u32 curr_tm = m2m_current_time_get();
+					if( DIFF(curr_tm,old_time) > (MAX_SMARTCONFIG_TIME * 1000) ){
+							break;
+					}
 				  }
 			}
 			break;
@@ -231,57 +236,34 @@ void sys_status_led_flash(SYS_cnn_status status){
 			}
 			break;
 		
-		case SYS_CNN_CONFIGING_STA:
-			if( DIFF(old_tm, c_time ) >= 200){
+		case SYS_CNN_CONFIGING_STA://在STA模式下 快闪
+			if( DIFF(old_tm, c_time ) >= 500){
 				old_tm = c_time;
 				sys_led_flash();
 			}
 			break;
-			
-		case SYS_CNN_CONFIGING_AP:
-			if( DIFF(old_tm, c_time ) >= 300){
+		case SYS_CNN_CONFIGING_AP://在AP模式下 慢闪
+			if( DIFF(old_tm, c_time ) >= 1500){
 				old_tm = c_time;
 				sys_led_flash();
 			}
 			break;
-
-		case SYS_CNN_ON_AP:
-		{
-			if( DIFF(old_tm, c_time ) >= 1000){
-				old_tm = c_time;
-				sys_led_flash();
-			}
-		}
-		
-		case SYS_CNN_LOST_CONNECT:
-			#if 0
-				digitalWrite(LED_WIFI_CONN_PIN, 0);
-			#else
-				if( DIFF(old_tm, c_time ) >= 1000){
-					old_tm = c_time;
-					sys_led_flash();
-				}
-			#endif
+		case SYS_CNN_LOST_CONNECT://没连接路由 灭
+			digitalWrite(LED_WIFI_CONN_PIN,1);
 			break;
-		case SYS_CNN_OFFLINE:
-			#if 1
-				digitalWrite(LED_WIFI_CONN_PIN, 0);
-			#else
-				if( DIFF(old_tm, c_time ) >= 3000){
-					old_tm = c_time;
-					sys_led_flash();
-				}
-			#endif
-			break;
-		case SYS_CNN_ONLINE:
+		case SYS_CNN_ONLINE://在线常亮
 			digitalWrite(LED_WIFI_CONN_PIN,0);
 			break;
 	}
 }
 void sys_uart_report_status(int stat){
-	delay(1000);
+	static int old_stat = 0;
 	char buf[5];
 	int i;
+	
+	if( old_stat == stat )
+		return;
+	
 	buf[0] = VERSION;
 	buf[1] = CMD;
 	buf[2] = IDX;
@@ -289,6 +271,9 @@ void sys_uart_report_status(int stat){
 	buf[4] = stat;
 	for(i=0;i<5;i++)
 		 Serial.print(buf[i]);
+
+	old_stat = stat;
+
 
 }
 static void sys_cnn_status_set(SYS_cnn_status status){
@@ -303,50 +288,39 @@ BOOL sys_in_ap_mode(void){
 }
 
 SYS_cnn_status sys_connect_status_hanle(size_t net){
-	
+    //static bool s_fag = 0;
 	SYS_cnn_status ret_status = SYS_CNN_MAX;
-
 	switch(g_sys_cnn){
-			case SYS_CNN_LOST_CONNECT:
-				if(WiFi.getMode() == WIFI_STA && WiFi.status() !=  WL_CONNECTED)
-					break;
-				g_sys_cnn = SYS_CNN_OFFLINE;
-				ret_status = SYS_CNN_OFFLINE;
-			case SYS_CNN_OFFLINE:
-				if( WiFi.getMode() == WIFI_STA && WiFi.status() !=	WL_CONNECTED ){
-					g_sys_cnn = SYS_CNN_LOST_CONNECT;
-					ret_status =  SYS_CNN_LOST_CONNECT;
-					break;
-				
-				}else if ( net && !m2m_event_host_offline(net) ){
-					g_sys_cnn = SYS_CNN_ONLINE;
-					ret_status =  SYS_CNN_ONLINE;
-				}else
-					break;
-					
-			case SYS_CNN_ONLINE:
-				if( WiFi.status() !=  WL_CONNECTED){
-					g_sys_cnn = SYS_CNN_LOST_CONNECT;
-					ret_status =  SYS_CNN_LOST_CONNECT;
-				}else if( net && m2m_event_host_offline(net) ){
-					g_sys_cnn = SYS_CNN_OFFLINE;
-					ret_status =  SYS_CNN_OFFLINE;
-				}
+		case SYS_CNN_LOST_CONNECT:
+			if(WiFi.getMode() == WIFI_STA && WiFi.status() !=  WL_CONNECTED)
 				break;
-			case SYS_CNN_OTAING:
-				g_sys_cnn = SYS_CNN_OTAING;
-				break;
-		}
+			g_sys_cnn = SYS_CNN_ONLINE;
+			ret_status = SYS_CNN_ONLINE;
+		case SYS_CNN_ONLINE:
+             if(WiFi.getMode() == WIFI_STA && WiFi.status() !=  WL_CONNECTED){
+				g_sys_cnn = SYS_CNN_LOST_CONNECT;
+				ret_status =  SYS_CNN_LOST_CONNECT;
+            }
+                break;
+	}
+    if( sys_in_ap_mode() ){
 
-	
-	if( ret_status != SYS_CNN_MAX)
-		sys_uart_report_status(ret_status);
-	
-	//m2m_printf("(%d)",m2m_event_host_offline(net));
+        g_sys_cnn = SYS_CNN_CONFIGING_AP;
+        ret_status = SYS_CNN_CONFIGING_AP;
+//        	if(!s_fag ){
+//			    ret_status = SYS_CNN_CONFIGING_AP;
+//			    s_fag = 1;
+//			}
+    }
+
+	if( ret_status < SYS_CNN_MAX){
+		sys_uart_report_status(ret_status);//ret_status run led
+    }
 	sys_status_led_flash(g_sys_cnn);
 	return ret_status;
 }
 int sys_eeprom_factory_reset(void){
+	u8 *p = NULL;
 	int len =  sizeof( SYS_Host_info_t ) + strlen(TST_SERVER_HOST);
 	SYS_Host_info_t *p_host = (SYS_Host_info_t*) mmalloc( len +1 );
 	
@@ -362,27 +336,25 @@ int sys_eeprom_factory_reset(void){
 	p_host->port = TST_SERVER_PORT;
 	p_host->len = strlen(TST_SERVER_HOST);
 	mcpy( (u8*)p_host->cname, (u8*)TST_SERVER_HOST, strlen(TST_SERVER_HOST) );
-	
+	p = (u8*)PRODUCT_SERVER_ID;
+	STR_2_HEX_ARRAY_INV( p_host->s_id.id, ID_LEN, p, strlen(PRODUCT_SERVER_ID));
+	byte_printf((u8*)"---freset id: ", (u8*)p_host->s_id.id, ID_LEN );
 	//m2m_printf("\nreset host %s\n", p_host->cname);
 	sys_host_config(NULL, (u8*)p_host, len);
 	mfree(p_host);
-
 	return 0;
 }
 void  sys_factory_reset(void){
 	static u32 last_tm = 0 ; 
 	
-	#if 1
-	if(0 == digitalRead(REST_PIN))
-	{
+	if(0 == digitalRead(REST_PIN)){
 
 		//m2m_printf("[%d]", digitalRead(REST_PIN));
 		//m2m_printf("(%d)\n", last_tm);
-
-		u32 difbuf = millis();
 	
-		if(DIFF( difbuf,last_tm ) > resttime)
-		{
+		u32 curr_tm = m2m_current_time_get();
+		if(DIFF( curr_tm,last_tm ) > resttime){
+			
 			sys_eeprom_factory_reset();
 			WiFi.disconnect();
 			WiFi.setAutoConnect(false);
@@ -393,13 +365,10 @@ void  sys_factory_reset(void){
 			else
 				sys_wifi_mode_set(WIFI_MODE_RST_SMT);
 			ESP.restart();
-		}    
-	}
-	else 	
-	{
+			}    
+	}else 	
 		last_tm = millis(); 
-	}
-	#endif	   
+			   
 } 
 
 /*wifi specti*/
@@ -411,11 +380,10 @@ int sys_smartconfig_auto_connet(void)
 {
   // set to sta
   u8 flag = 0;
-  u32 last_tm = 0; 
-  pinMode(LED_WIFI_CONN_PIN, OUTPUT);
+  u32 last_tm = 0, old_time = 0 ; 
   WiFi.mode(WIFI_STA);
   WiFi.begin();
-  for (int i = 0; i < 1000; i++)
+  old_time = m2m_current_time_get();
   do{
     int wstatus = WiFi.status();
     if ( wstatus == WL_CONNECTED)
@@ -431,10 +399,15 @@ int sys_smartconfig_auto_connet(void)
 	   if(DIFF_(millis(),last_tm ) > 500){
 
 	    flag = flag ==0 ? 1:0; 
-	    digitalWrite(LED_WIFI_CONN_PIN,flag);
+	    digitalWrite( LED_WIFI_CONN_PIN, flag);
 	    last_tm = millis();
   	  }
     }
+	u32 curr_tm = m2m_current_time_get();
+	
+	if( DIFF(curr_tm,old_time) > (MAX_SMARTCONFIG_TIME * 1000) ){
+			break;
+	}
     sys_factory_reset();
 	application_wifi_connet_loop();
   }while(1);
@@ -452,18 +425,16 @@ int sys_smartconfig_auto_connet(void)
 void sys_sta_smartconfig(void) {
 
   u8 flag = 0;
-  u32 last_tm, wait_tm,led_tm = 0; 
+  u32 last_tm = 0; 
   int ret = 0;
-  static bool w_fag = 0;
-  static bool w_fag1 = 0;
   // config in output mode   
-  pinMode(LED_WIFI_CONN_PIN, OUTPUT);
   digitalWrite(LED_WIFI_CONN_PIN,0);
   
   //Init WiFi as Station, start SmartConfig
   WiFi.mode(WIFI_STA);
   WiFi.beginSmartConfig();
-    
+
+  last_tm = m2m_current_time_get();
   while (!WiFi.smartConfigDone()) {      //wait app to connect
 
 	delay(10);
@@ -472,20 +443,27 @@ void sys_sta_smartconfig(void) {
 	sys_status_led_flash( SYS_CNN_CONFIGING_STA );
 	// key rest 
 	sys_factory_reset();
+#if 1
+	u32 curr_tm = m2m_current_time_get();
 
-	if(DIFF(millis(),led_tm ) > 1000 ){
-		led_tm =  millis();
-	    //Serial.print("+");
-		}
+	if( DIFF(curr_tm,last_tm ) > (MAX_SMARTCONFIG_TIME * 1000) ){
+		break;
+	 }
+#endif
   }
   //Configure module to automatically connect on power on to the last used access point.
   ret = WiFi.setAutoConnect(true);
   //Wait for WiFi to connect to AP
+  last_tm = m2m_current_time_get();
   while (WiFi.status() != WL_CONNECTED) {  //phone connecting the AP
   	delay(30);
 	application_wifi_connet_loop();
   	sys_status_led_flash( SYS_CNN_CONFIGING_STA );
+  	if( DIFF(m2m_current_time_get(),last_tm ) > (1000) ){
+		  break;
+	   }
   }
+  local_ip_save();
   // light up led.
   sys_status_led_flash(SYS_CNN_LOST_CONNECT);  
 }
@@ -506,7 +484,10 @@ void sys_setup(void){
 	sys_gpio_init();
 	sys_wifi_init();
     local_ip_save();
-	//sys_conf_printf();
+	sys_conf_printf();
+	// increaset reset counter.
+	sys_conf.reset_cnt++;
+	sys_eeprom_write( EEPROM_CONF_ADDRESS, (u8*)&sys_conf,  sizeof(EEPROM_conf_T));
 }
 
 // system 

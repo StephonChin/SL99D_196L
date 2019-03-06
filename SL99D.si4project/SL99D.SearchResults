@@ -1,0 +1,2 @@
+---- Ultimate Matches (1 in 1 files) ----
+config_hardware.h (src\m2mnet\platform\esp) line 27 : #define SOFTAP_SSID_	"UltimateString_"

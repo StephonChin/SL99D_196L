@@ -56,15 +56,15 @@ int m2m_setup(void){
     conf.def_enc_type = M2M_ENC_TYPE_AES128;
 	// config host id 
     getmac((u8*)&device_id.id[ ID_LEN - 6 ]);
-	
 	// creat entire id of the product.
 	product_id_head_set( device_id.id, ID_VERSION, ID_TYPE_DEVICE, (s16)PRODUCT_CLASS, (u32)PRODUCT_ID, NULL);
 
-	byte_printf("device id ", (u8*)&device_id, ID_LEN );
+	byte_printf((u8*)"device id ", (u8*)&device_id, ID_LEN );
 
 	//m2m_bytes_dump( "ID : ", &device_id,  ID_LEN );
 	
 	//string2hexarry((u8*)&hid, PRODUCT_SERVER_ID, strlen(PRODUCT_SERVER_ID));
+	//m2m_bytes_dump("host id: ", hid.id, ID_LEN);
     conf.max_router_tm = 10*60*1000;
     conf.do_relay = 0;
     m2m_int(&conf);
@@ -132,6 +132,9 @@ void dev_callback(int code, M2M_packet_T **pp_ack_data,void *p_r,void *p_arg){
                  M2M_packet_T *p_ack = (M2M_packet_T*)mmalloc(sizeof(M2M_packet_T));
                  p_ack->p_data = (u8*)mmalloc( sizeof( M2M_id_T) + strlen(getlocal_ip()) + 1 );
                  p_ack->len = sizeof( M2M_id_T) + strlen(getlocal_ip());
+
+				 // refresh ip 
+				 local_ip_save();
                  mcpy( (u8*)p_ack->p_data, (u8*)device_id.id, sizeof(M2M_id_T) );
                  mcpy( (u8*)&p_ack->p_data[sizeof(M2M_id_T)], (u8*)getlocal_ip(),  strlen(getlocal_ip()));
                  m2m_log_debug("local ip %s\n", getlocal_ip());

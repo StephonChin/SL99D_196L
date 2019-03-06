@@ -11,6 +11,8 @@
 
 
 #define EEPROM_CONF_SIZE		2048
+#define DIFF(a,b) ((a>b)?(a-b):(b-a))
+
 
 
 //file parameters
@@ -39,7 +41,7 @@ void Led_Program_Config(void)
 {
   //Timer init
   os_timer_setfn(&MyTimer, Timer_Call_Back, NULL);
-  os_timer_arm(&MyTimer, 10, true); // 10 milliseconds
+  os_timer_arm(&MyTimer, 1000, true); // 1000 milliseconds
 
   Uart_Init();
 
@@ -64,24 +66,55 @@ void Led_Program_Config(void)
   */
 void Led_Entrance(void)
 {
-	//static uint8_t  ShowStep;
-	static uint8_t  ModeStep;
+	#if 1
+
+	static uint32_t 	time_10ms_pre = millis();
+	static uint32_t		time_50ms_pre = time_10ms_pre;
+
+	uint32_t time_now = millis();
+	if (DIFF(time_now, time_10ms_pre) >= 10)
+	{
+		time_10ms_pre = time_now;
+		
+		Key_Scan();
+		Data_Process();
+		Ws2812_Show();
+	}
+
+	if (DIFF(time_now, time_50ms_pre) >= 50)
+	{
+		time_50ms_pre = time_now;
+		Display_Control();
+	}
+
 	
+	if (TimerUpdateFlag == true)
+	{
+		TimerUpdateFlag = false;
+		Timer_Count_Down();
+	}
+
+	#else
+
+	static uint8_t  ModeStep;
 	if (TimerUpdateFlag == true){
 		TimerUpdateFlag = false;
 
 		Key_Scan();
 
 		Data_Process();
+		
+		Timer_Count_Down();
 
 		ModeStep++;
-		if (ModeStep >= 6){
+		if (ModeStep >= 5){
 			ModeStep = 0;
 			Display_Control();
 		}
 
 		Ws2812_Show();
 	}
+	#endif
 }
 
 
