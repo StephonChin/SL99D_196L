@@ -13,7 +13,8 @@ void Display_Tree_Steady(void)
 {
 	uint16_t temp = 0;
 	
-	if(Display.Init == TRUE){	
+	if(Display.Init == TRUE)
+	{	
 		Display.Init = FALSE;
 
 		Para_Err_Check(&ParaData[STEADY]);
@@ -24,7 +25,8 @@ void Display_Tree_Steady(void)
 		OtherCtrl = 0;
 		TempColor = 0;
 
-		for (temp = 0; temp < LED_TOTAL; temp++){
+		for (temp = 0; temp < LED_TOTAL; temp++)
+		{
 			TempColor = temp % ParaData[STEADY].ColorNum;
 			LedData[temp].DutyR = ParaData[STEADY].Color[TempColor].BufR;
 			LedData[temp].DutyG = ParaData[STEADY].Color[TempColor].BufG;
@@ -145,9 +147,11 @@ void Display_Tree_Rainbow(void)
 	    }
 	    
 	    
-	    for (temp = 0; temp < LayerMax - 1; temp++){
+	    for (temp = 0; temp < LayerMax - 1; temp++)
+	    {
 	      temp2 = Layer[temp + 1].Head;
-	      for (temp1 = Layer[temp].Head; temp1 <= Layer[temp].Tail; temp1++){
+	      for (temp1 = Layer[temp].Head; temp1 <= Layer[temp].Tail; temp1++)
+	      {
 	        LedData[temp1].DutyR = LedData[temp2].DutyR;
 	        LedData[temp1].DutyG = LedData[temp2].DutyG;
 	        LedData[temp1].DutyB = LedData[temp2].DutyB;
@@ -155,7 +159,8 @@ void Display_Tree_Rainbow(void)
 	    }
 	    
 	    temp = LayerMax - 1;
-	    for (temp1 = Layer[temp].Head; temp1 <= Layer[temp].Tail; temp1++){
+	    for (temp1 = Layer[temp].Head; temp1 <= Layer[temp].Tail; temp1++)
+	    {
 	      LedData[temp1].DutyR = TempR;
 	      LedData[temp1].DutyG = TempG;
 	      LedData[temp1].DutyB = TempB;

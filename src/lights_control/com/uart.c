@@ -20,7 +20,7 @@
 
  */
 
-
+#if 0
 /**
  *  UART GPIOs
  *
@@ -769,3 +769,4 @@ uart_detect_baudrate(int uart_nr)
 
     return default_rates[i];
 }
+#endif

@@ -186,7 +186,7 @@ typedef struct
   uint8_t   chksum;
   uint8_t   cmd;
   uint8_t   len;
-  uint8_t   payload[64];
+  uint8_t   payload[1000];
 }_type_app_pack;
 
 

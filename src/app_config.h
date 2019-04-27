@@ -17,7 +17,7 @@
 
 /********* server configure ***/
 /** 设备端 配置 ***********************************************************/
-#define MAX_SMARTCONFIG_TIME	(10*60)
+#define MAX_SMARTCONFIG_TIME	(3*60)
 #define TST_DEV_LOCAL_ID    (8)
 #define TST_DEV_LOCAL_PORT  PRODUCT_LOCAL_PORT//(9529)
 #define TST_DEV_LOCAL_KEY   PRODUCT_KEY//"123"
