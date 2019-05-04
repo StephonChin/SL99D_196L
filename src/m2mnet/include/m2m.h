@@ -22,7 +22,7 @@ extern "C"
 #define M2M_LOG        (2)
 #define M2M_LOG_WARN   (3)
 #define M2M_LOG_ERROR  (4)
-
+#define M2M_LOG_NONE   (5)
 #ifndef M2M_VERSION_MAJOR
 #include "BuildValue.h"
 #endif
@@ -188,7 +188,8 @@ typedef struct{
     u8 version;     // 验证数,表示协议和协议版本，目前是 0x01
     u8 cmd;         // 命令类型
     u8 idx;         // 序号, 预留
-    u8 len;         // 数据长度
+	u8 nouse;
+    u16 len;         // 数据长度
     char payload[0];// 数据
 } WIFI_PACKET1;
 typedef struct LM2M_OTA_data{

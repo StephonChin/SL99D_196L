@@ -107,19 +107,39 @@ int product_id_pid_metch(u8 *p_id,   u32 pid){
 
 int product_id_head_set(u8 *p_id,char ver, char type, s16 class, u32 pid, u8 *p_mac){
 	int position = 0;
+	u8 *p  = NULL, *p_s = NULL;
 	if(p_mac)
 		mcpy( &p_id[ ID_LEN - 6 ],  p_mac, 6);
+	
 	position = ID_LEN - 6 - sizeof(u32);
-	mcpy(&p_id[position], &pid, sizeof(u32));
-	
+	// set pid.
+	//mcpy(&p_id[position], &pid, sizeof(u32));
+
+	p = &p_id[position];
+	p_s = (u8*)&pid;
+	*p = p_s[3];
+	p++;
+	*p = p_s[2];
+	p++;
+	*p = p_s[1];
+	p++;
+	*p = p_s[0];
+	p++;
+	// set class.
 	position -= sizeof(s16);
-	mcpy(&p_id[position], &class, sizeof(s16));
-	
+	p = &p_id[position];
+	p_s = (u8*)&class;
+	*p = p_s[1];
+	p++;	
+	*p = p_s[0];
+	p++;	
+	//mcpy(&p_id[position], &class, sizeof(s16));
+	// set type.
 	position -= ( 2 + 1 );
 	p_id[position] = type;
 	position -= 1;
+	// set version.
 	p_id[position] = ver;	
-
 	//m2m_bytes_dump( "ID : ", p_id,  ID_LEN );
 }
 void product_id_print(u8 *p_id){

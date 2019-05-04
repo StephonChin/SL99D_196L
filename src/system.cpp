@@ -36,36 +36,15 @@
 #include "application_cmd_handle.h"
 #include "config.h"
 #include <EEPROM.h>
-
+#include "app_m2m_handle.h"
 
 
 #define EEPROM_VER	(0X11)
 #define DIFF(a,b) ((a>b)?(a-b):(b-a))
 #define resttime 5000
-
+#define MAXWAITTIME (3*60*1000)
 static u8 *p_g_ota_url = NULL;
-typedef enum LESP_WIFI_MODE_T{
-	WIFI_MODE_RST_SMT = 0,
-	WIFI_MODE_RST_AP,
-	WIFI_MODE_STA_SMT,
-	WIFI_MODE_STA_PW,
-	WIFI_MODE_MAX
-
-}LESP_WIFI_MODE_T;
-
-typedef struct EEPROM_CONF_T{
-	u8 ver_mak;	// version and mark that identify if the eeprom have been init. 
-	u8 wifi_mod;
-	u8 reset_cnt;	// 重启计数器.
-	u8 ssidlen;
-	u8 pwlen;
-	u8 p_ssid_pw[64];
-	
-	SYS_Host_info_t host;
-
-}EEPROM_conf_T;
-
-static SYS_cnn_status g_sys_cnn = SYS_CNN_LOST_CONNECT;
+SYS_cnn_status g_sys_cnn = SYS_CNN_LOST_CONNECT;
 static BOOL en_broadcast = TRUE;
 
 /* c interface */
@@ -113,6 +92,32 @@ int sys_eeprom_write(int address, u8 *p_buf, int len){
 	EEPROM.commit();
 	return i;
 }
+/**********************************************
+** description: 保存秘钥.
+** args:    
+**      
+**          p_key;p_keylen;
+********/
+u32 esp8266_secretKey_write(u8 *p_key,u16 p_keylen)
+{ 
+	 if( sys_conf.ver_mak != EEPROM_VER )
+     return 1;
+    mcpy(sys_conf.p_key,p_key,p_keylen);
+	sys_conf.keylen=p_keylen;
+	sys_eeprom_write( EEPROM_CONF_ADDRESS, (u8*)&sys_conf,  sizeof(EEPROM_conf_T));
+
+	return 0;
+}
+u32 esp8266_secretKey_read(u8 *p_key,u16 *p_keylen)
+{
+ if( sys_conf.ver_mak != EEPROM_VER || sys_conf.keylen>32 || sys_conf.keylen<1)
+   return 1;
+ mcpy(p_key,sys_conf.p_key,sys_conf.keylen);
+ *p_keylen=sys_conf.keylen;
+  return 0;
+
+}
+
 int sys_wifi_mode_set(LESP_WIFI_MODE_T mod){
 	sys_conf.wifi_mod = mod;
 	sys_eeprom_write( EEPROM_CONF_ADDRESS, (u8*)&sys_conf,  sizeof(EEPROM_conf_T));
@@ -123,10 +128,14 @@ void sys_gpio_init(void){
 	randomSeed(analogRead(0));
 	//Serial.begin(9600);
 
+    
+	pinMode(SREST_PIN, OUTPUT);
+	digitalWrite (SREST_PIN, 1);
 	pinMode(REST_PIN, OUTPUT);
-	analogWrite(REST_PIN, 1);
+	digitalWrite(REST_PIN, 1);
 	pinMode(REST_PIN, INPUT);
 	pinMode(LED_WIFI_CONN_PIN, OUTPUT);
+
 }
 static void sys_broadcast_set(BOOL status){
 	en_broadcast = status;
@@ -147,8 +156,8 @@ void sys_wifi_init(void){
 			m2m_log_debug("WIFI_MODE_RST_SMT");
 			WiFi.mode(WIFI_STA);
 			sys_sta_smartconfig();
-			sys_conf.wifi_mod = WIFI_MODE_STA_SMT;
-			sys_eeprom_write( EEPROM_CONF_ADDRESS, (u8*)&sys_conf, sizeof(EEPROM_conf_T));
+		//  sys_conf.wifi_mod = WIFI_MODE_STA_SMT;
+		//  sys_eeprom_write( EEPROM_CONF_ADDRESS, (u8*)&sys_conf, sizeof(EEPROM_conf_T));
 			sys_broadcast_set(TRUE);
 			break;
 		case WIFI_MODE_RST_AP:
@@ -174,39 +183,39 @@ void sys_wifi_init(void){
 				sys_broadcast_set(TRUE);
 			}
 			break;
-		case WIFI_MODE_STA_PW:
+		// case WIFI_MODE_STA_PW:
 			
-			m2m_log_debug("WIFI_MODE_STA_PW");
-			if(sys_conf.ssidlen && sys_conf.pwlen){
-				u8 *p = NULL;
-				u8 ssid[32];
-				u8 pw[32];
-				u32 old_time = m2m_current_time_get();
-				mmemset(ssid, 0, 32);				
-				mmemset(pw, 0, 32);
+		// 	m2m_log_debug("WIFI_MODE_STA_PW");
+		// 	if(sys_conf.ssidlen && sys_conf.pwlen){
+		// 		u8 *p = NULL;
+		// 		u8 ssid[32];
+		// 		u8 pw[32];
+		// 		u32 old_time = m2m_current_time_get();
+		// 		mmemset(ssid, 0, 32);				
+		// 		mmemset(pw, 0, 32);
 
-				WiFi.mode(WIFI_STA);
-				sys_eeprom_read( ( EEPROM_CONF_ADDRESS + (int)((u8*)sys_conf.p_ssid_pw -  (u8*)&sys_conf.ver_mak) ), ssid,  sys_conf.ssidlen);
-				sys_eeprom_read( ( EEPROM_CONF_ADDRESS + (int)((u8*)sys_conf.p_ssid_pw -  (u8*)&sys_conf.ver_mak) + sys_conf.ssidlen ), pw,  sys_conf.pwlen);
+		// 		WiFi.mode(WIFI_STA);
+		// 		sys_eeprom_read( ( EEPROM_CONF_ADDRESS + (int)((u8*)sys_conf.p_ssid_pw -  (u8*)&sys_conf.ver_mak) ), ssid,  sys_conf.ssidlen);
+		// 		sys_eeprom_read( ( EEPROM_CONF_ADDRESS + (int)((u8*)sys_conf.p_ssid_pw -  (u8*)&sys_conf.ver_mak) + sys_conf.ssidlen ), pw,  sys_conf.pwlen);
 				
-				m2m_log_debug("ssid %s", ssid);
-				m2m_log_debug("pw %s", pw);
-				//m2m_bytes_dump((u8*)"ssid is ", ssid, (int)sys_conf.ssidlen);
-				//m2m_bytes_dump((u8*)"password  is ", pw, (int)sys_conf.pwlen);
+		// 		m2m_log_debug("ssid %s", ssid);
+		// 		m2m_log_debug("pw %s", pw);
+		// 		//m2m_bytes_dump((u8*)"ssid is ", ssid, (int)sys_conf.ssidlen);
+		// 		//m2m_bytes_dump((u8*)"password  is ", pw, (int)sys_conf.pwlen);
 				
-				WiFi.begin((const char*)ssid, (const char*)pw);
+		// 		WiFi.begin((const char*)ssid, (const char*)pw);
 				
-				while (WiFi.status() != WL_CONNECTED){ // Wait for the Wi-Fi to connect
-				    delay(50);
-				    //Serial.print('.');
-					sys_factory_reset();
-					u32 curr_tm = m2m_current_time_get();
-					if( DIFF(curr_tm,old_time) > (MAX_SMARTCONFIG_TIME * 1000) ){
-							break;
-					}
-				  }
-			}
-			break;
+		// 		while (WiFi.status() != WL_CONNECTED){ // Wait for the Wi-Fi to connect
+		// 		    delay(50);
+		// 		    //Serial.print('.');
+		// 			sys_factory_reset();
+		// 			u32 curr_tm = m2m_current_time_get();
+		// 			if( DIFF(curr_tm,old_time) > (MAX_SMARTCONFIG_TIME * 1000) ){
+		// 					break;
+		// 			}
+		// 		  }
+		// 	}
+		// 	break;
 		case WIFI_MODE_STA_SMT:
 			
 			m2m_log_debug("WIFI_MODE_STA_SMT");
@@ -223,10 +232,10 @@ void sys_led_flash(void){
 	digitalWrite(LED_WIFI_CONN_PIN,led_status);
 }
 void sys_status_led_flash(SYS_cnn_status status){
-	static u32 old_tm = millis();
+	static u32 old_tm = 0;
 
 	//m2m_printf("<%d>",status);
-	u32 c_time = millis();
+	u32 c_time = m2m_current_time_get();
 	switch(status){
 		
 		case SYS_CNN_OTAING:
@@ -287,7 +296,7 @@ BOOL sys_in_ap_mode(void){
 
 }
 
-SYS_cnn_status sys_connect_status_hanle(size_t net){
+SYS_cnn_status sys_connect_status_hanle(){
     //static bool s_fag = 0;
 	SYS_cnn_status ret_status = SYS_CNN_MAX;
 	switch(g_sys_cnn){
@@ -302,6 +311,9 @@ SYS_cnn_status sys_connect_status_hanle(size_t net){
 				ret_status =  SYS_CNN_LOST_CONNECT;
             }
                 break;
+		case SYS_CNN_CONFIGING_AP:
+		      	g_sys_cnn = SYS_CNN_LOST_CONNECT;	
+						break;
 	}
     if( sys_in_ap_mode() ){
 
@@ -328,7 +340,9 @@ int sys_eeprom_factory_reset(void){
 		return  M2M_ERR_NULL;
 
 	// todo
-	sys_conf.ver_mak = EEPROM_VER;
+  sys_conf.ver_mak == EEPROM_VER;
+	memcpy(sys_conf.p_key,"123",sizeof("123")); 
+	sys_conf.keylen=strlen("123");
 	sys_eeprom_write( EEPROM_CONF_ADDRESS, (u8*)&sys_conf,  sizeof(EEPROM_conf_T));
 	
 	// todo add aes aeskey
@@ -346,28 +360,33 @@ int sys_eeprom_factory_reset(void){
 }
 void  sys_factory_reset(void){
 	static u32 last_tm = 0 ; 
-	
+	u32 curr_tm = 0;
+
+
 	if(0 == digitalRead(REST_PIN)){
 
 		//m2m_printf("[%d]", digitalRead(REST_PIN));
 		//m2m_printf("(%d)\n", last_tm);
 	
-		u32 curr_tm = m2m_current_time_get();
+		curr_tm = m2m_current_time_get();
 		if(DIFF( curr_tm,last_tm ) > resttime){
 			
 			sys_eeprom_factory_reset();
-			WiFi.disconnect();
-			WiFi.setAutoConnect(false);
-			mmemset(sys_conf.p_ssid_pw, 0,  64);
+			// WiFi.disconnect();
+			// WiFi.setAutoConnect(false);
+			// mmemset(sys_conf.p_ssid_pw, 0,  64);
 			
 			if(sys_conf.wifi_mod == WIFI_MODE_RST_SMT)
 				sys_wifi_mode_set(WIFI_MODE_RST_AP);
 			else
 				sys_wifi_mode_set(WIFI_MODE_RST_SMT);
-			ESP.restart();
+			delay(500);
+           // digitalWrite (SREST_PIN, 0);
+			system_restore();
+			ESP.reset();
 			}    
 	}else 	
-		last_tm = millis(); 
+		last_tm = m2m_current_time_get(); 
 			   
 } 
 
@@ -380,9 +399,10 @@ int sys_smartconfig_auto_connet(void)
 {
   // set to sta
   u8 flag = 0;
-  u32 last_tm = 0, old_time = 0 ; 
+  u32 tmp_tm = 0, last_tm = 0, old_time = 0 ; 
   WiFi.mode(WIFI_STA);
   WiFi.begin();
+	g_sys_cnn=SYS_CNN_LOST_CONNECT;
   old_time = m2m_current_time_get();
   do{
     int wstatus = WiFi.status();
@@ -395,10 +415,11 @@ int sys_smartconfig_auto_connet(void)
       return true;
       //break;
     }else{
-      delay(10);
-	   if(DIFF_(millis(),last_tm ) > 500){
+      	delay(10);
+	  	tmp_tm = millis();
+		if( DIFF_(tmp_tm ,last_tm ) > 500){
 
-	    flag = flag ==0 ? 1:0; 
+		flag = flag ==0 ? 1:0; 
 	    digitalWrite( LED_WIFI_CONN_PIN, flag);
 	    last_tm = millis();
   	  }
@@ -423,9 +444,10 @@ int sys_smartconfig_auto_connet(void)
 *  false is returned.
 */
 void sys_sta_smartconfig(void) {
-
-  u8 flag = 0;
-  u32 last_tm = 0; 
+  // u8 _configing = 1;
+  // SYS_cnn_status _led_state = SYS_CNN_CONFIGING_STA;
+	g_sys_cnn=SYS_CNN_CONFIGING_STA;
+  // u32 last_tm = 0, curr_tm =0; 
   int ret = 0;
   // config in output mode   
   digitalWrite(LED_WIFI_CONN_PIN,0);
@@ -433,27 +455,36 @@ void sys_sta_smartconfig(void) {
   //Init WiFi as Station, start SmartConfig
   WiFi.mode(WIFI_STA);
   WiFi.beginSmartConfig();
-
+#if 0
   last_tm = m2m_current_time_get();
-  while (!WiFi.smartConfigDone()) {      //wait app to connect
+  while( WiFi.status() != WL_CONNECTED) {      //wait app to connect
 
-	delay(10);
-	
-	application_wifi_connet_loop();
-	sys_status_led_flash( SYS_CNN_CONFIGING_STA );
-	// key rest 
-	sys_factory_reset();
-#if 1
-	u32 curr_tm = m2m_current_time_get();
+		if( WiFi.smartConfigDone()){
+			ret = WiFi.setAutoConnect(true);
+			//break;
+		}
+		delay(10);
+		
+		application_wifi_connet_loop();
+		sys_status_led_flash( _led_state );
+		// key rest 
+		sys_factory_reset();
+	#if 1
+		curr_tm = m2m_current_time_get();
+		if( _configing && DIFF(curr_tm,last_tm ) > (MAX_SMARTCONFIG_TIME * 1000) ){
+			_configing = 0;
+			_led_state = SYS_CNN_LOST_CONNECT;
+			WiFi.stopSmartConfig();
+			break;
+		}
+	#endif
 
-	if( DIFF(curr_tm,last_tm ) > (MAX_SMARTCONFIG_TIME * 1000) ){
-		break;
-	 }
+		}
 #endif
-  }
   //Configure module to automatically connect on power on to the last used access point.
-  ret = WiFi.setAutoConnect(true);
+  #if 0
   //Wait for WiFi to connect to AP
+  WiFi.begin();
   last_tm = m2m_current_time_get();
   while (WiFi.status() != WL_CONNECTED) {  //phone connecting the AP
   	delay(30);
@@ -466,11 +497,12 @@ void sys_sta_smartconfig(void) {
   local_ip_save();
   // light up led.
   sys_status_led_flash(SYS_CNN_LOST_CONNECT);  
+#endif
 }
 void sys_conf_printf(void){
 	m2m_log("version %d ", sys_conf.ver_mak);
 	m2m_log("wifi mode %d", sys_conf.wifi_mod);
-	m2m_log("ssi_password %s", sys_conf.p_ssid_pw);
+// m2m_log("ssi_password %s", sys_conf.p_ssid_pw);
 	m2m_log("server port  %d cname %s", sys_conf.host.port, sys_conf.host.cname);
 	byte_printf((u8*)"server host id is ", (u8*)sys_conf.host.s_id.id, ID_LEN);
 }	
@@ -497,23 +529,50 @@ int sys_ssid_pw_reset(LM2M_router_conf *p_router){
 	u8 old_wifi_mod = sys_conf.wifi_mod;
 	if(!p_router  || !p_router->ssidlen || ( p_router->ssidlen + p_router->passwordlen )  > 64 )
 		return -1;
-	
-	sys_conf.ssidlen =  p_router->ssidlen;
-	sys_conf.pwlen = p_router->passwordlen;
-
-	mmemset( sys_conf.p_ssid_pw, 0, 64);
-	mcpy((u8*)sys_conf.p_ssid_pw, (u8*)p_router->p_ssid_pw, (int)(p_router->ssidlen + p_router->passwordlen));
+	u8 flag = 0;
+    u32 last_tm = 0;
+	//sys_conf.ssidlen =  p_router->ssidlen;
+//	sys_conf.pwlen = p_router->passwordlen;
+  m2m_log("set ssid and pwd!ssidlen=%d,pwdlen=%d,pwd=%.*s\r\n",p_router->ssidlen,p_router->passwordlen,p_router->passwordlen+p_router->ssidlen,p_router->p_ssid_pw);
+	char *ssid=(char*)malloc(p_router->ssidlen+1);
+	mmemset((u8*)ssid,0,p_router->ssidlen);
+	memcpy(ssid,p_router->p_ssid_pw,p_router->ssidlen);
+	ssid[p_router->ssidlen]='\0';
+	char *pwd=(char*)malloc(p_router->passwordlen+1);
+	mmemset((u8*)pwd,0,p_router->passwordlen);
+	memcpy(pwd,&p_router->p_ssid_pw[p_router->ssidlen],p_router->passwordlen);
+	pwd[p_router->passwordlen]='\0';
+	m2m_log("ssid:%s,pwd:%s,\r\n",ssid,pwd);
+	WiFi.mode(WIFI_STA);
+	WiFi.begin(ssid,pwd);
+	u32 curr_tm = m2m_current_time_get()+30*1000;
+	 while(WiFi.status() != WL_CONNECTED){
+			delay(10);
+	   if(DIFF_(millis(),last_tm ) > 1500){
+	    flag = flag ==0 ? 1:0; 
+	    digitalWrite( LED_WIFI_CONN_PIN, flag);
+	    last_tm = millis();
+  	  }
+		
+			if( m2m_current_time_get()>curr_tm ){
+			break;
+		}
+	}
 	//m2m_printf("\n--->ssid and password is %s\n", p_router->p_ssid_pw);
 #if 1
-
+	m2m_log("connect successs!\r\n");
 	//WiFi.disconnect();
 	//WiFi.setAutoConnect(false); 
 	
-	sys_conf.wifi_mod = WIFI_MODE_STA_PW;
+	 // light up led.
+  sys_status_led_flash(SYS_CNN_LOST_CONNECT);  
+	sys_conf.wifi_mod = WIFI_MODE_STA_SMT;
 	sys_eeprom_write( EEPROM_CONF_ADDRESS, (u8*)&sys_conf, sizeof(EEPROM_conf_T));
-	sys_conf.wifi_mod = old_wifi_mod;
+	free(ssid);
+	free(pwd);
+//	sys_conf.wifi_mod = old_wifi_mod;
 #endif
-
+    
 	return 0;
 }
 
@@ -641,20 +700,20 @@ int sys_cmd_handle(size_t net,u8 cmd,u8*p_data,int recv_len, M2M_packet_T **pp_a
 					mcpy(p_g_ota_url, p_data, strlen((char*)p_data));
 			}		
 			break;
-		case WIFI_CMD_SYS_BROADCASTSETTING_RQ:
-			if(p_data && recv_len > 0){
-				if(p_data[0]){
-					m2m_broadcast_enable(net);
-				}else{					
-					m2m_broadcast_disable(net);
-				}
-			}
+		// case WIFI_CMD_SYS_BROADCASTSETTING_RQ:
+		// 	if(p_data && recv_len > 0){
+		// 		if(p_data[0]){
+		// 			//m2m_broadcast_enable(net);
+		// 		}else{					
+		// 			m2m_broadcast_disable(net);
+		// 		}
+		//	}
 		}
 
 	return ret;
 }
 void system_loop(void){
-
+  static u32 currtim=m2m_current_time_get()+MAXWAITTIME;
 	if(p_g_ota_url){
 		
 		m2m_printf("-222---->>url %s \n", p_g_ota_url);
@@ -662,9 +721,16 @@ void system_loop(void){
 		mfree(p_g_ota_url);
 		p_g_ota_url = NULL;
 	}
-
+if(	g_sys_cnn==SYS_CNN_CONFIGING_STA && (WiFi.status() == WL_CONNECTED || currtim<m2m_current_time_get() )) {      //wait app to connect
+  	WiFi.setAutoConnect(true);
+	 g_sys_cnn=SYS_CNN_LOST_CONNECT;
+		sys_conf.wifi_mod = WIFI_MODE_STA_SMT;
+		sys_eeprom_write( EEPROM_CONF_ADDRESS, (u8*)&sys_conf, sizeof(EEPROM_conf_T));
+		local_ip_save();
+		m2m_setup();
+	}
 	// 指示灯控制.
-	
+	sys_connect_status_hanle( );
 	//  恢复出厂按键探测.
 	sys_factory_reset();
 }

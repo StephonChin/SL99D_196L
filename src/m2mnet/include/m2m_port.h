@@ -14,7 +14,7 @@ int m2m_gethostbyname(M2M_Address_T* addr,char* host);
 int m2m_openSocket(int* socketId,u16 port);
 int m2m_closeSocket(int socketId);
 int broadcast_enable(int socket_fd);
-int get_bcast_list(u32 *list, int maxlen);
+int get_bcast_list(int fd, u32 *list, int maxlen);
 
 int m2m_send
     (

@@ -2,7 +2,9 @@
 #define _CONFIG_H
 
 /**log define ****/
-//#define CONF_LOG_TIME		1
+// #define CONF_LOG_TIME		1
+//#define ENABLE_RELAY
+
 //#define HAS_LINUX_MUTEX	1
 /** net thing **/
 #define PROTO_VERSION_HDR   (1)
@@ -10,14 +12,16 @@
 #define  PLATFORM_ESP   // esp8266 support.
 
 /* enable broadcast */
-#define CONF_BROADCAST_ENABLE 
-
-//#define C_HAS_FILE
+//#define CONF_BROADCAST_ENABLE 
+#define CONF_BROADCAST_ENABLE_2
+// #define C_HAS_FILE
+// 不在屏幕显示 log
 #define NOSTDOUTPUT
 /** timeout  **/
 #define NET_RETRAMIT_TIMOUT_MS  (10000)
-// 广播周期
+// 广播包周期
 #define NET_RADIO_RQ_INV_MS		(300)
+
 
 // max si
 #define M2M_PROTO_PKT_MAXSIZE   (1024)
@@ -40,7 +44,7 @@
 #define DEFAULT_DEVICE_PORT (9529)
 #define DEFAULT_APP_PORT (9528)
 #define DEFAULT_SERVER_PORT (9527)
-#define DEFAULT_HOST PRODUCT_SERVER_CNAME// ("192.168.0.196")
+#define DEFAULT_HOST ("192.168.0.196")
 #define DEFAULT_INTERVAL_PING_TM_MS  (20*1000)
 
 #define DEFAULT_DEVICE_KEY   "1234567890123456"
@@ -59,7 +63,7 @@
 	版本： 1 byte
     类型： 1 byete ： 0 为设备， 1 为APP端，2 为服务端
     厂家： 2 byete： 默认为 0
-    品类： 2 byte 为led 灯饰类， 2 为智能家具类
+    品类： 2 byte   , 1为led 灯饰类， 2 为智能家具类
     产品： 4 byte
     产品 mac：  6 byte 
 ******/

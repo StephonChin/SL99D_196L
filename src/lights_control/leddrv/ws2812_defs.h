@@ -16,8 +16,8 @@
 #define NUM_RGB_BYTES           588             
 #define NUM_I2S_PIXEL_BYTES1    3000            
 #define NUM_I2S_PIXEL_WORDS1    750             
-#define NUM_I2S_PIXEL_BYTES2    2500              
-#define NUM_I2S_PIXEL_WORDS2    625            
+#define NUM_I2S_PIXEL_BYTES2    2600              
+#define NUM_I2S_PIXEL_WORDS2    650            
 
 #elif AL99E
 #define LED_TOTAL				245
@@ -31,7 +31,7 @@
 
 // -----------------------------------------------------
 // I2S timing parameters 
-#define WS_I2S_BCK          (18)                        // >=18
+#define WS_I2S_BCK          (20)                        // >=18
 #define WS_I2S_DIV          (14)                        // >= 13
 
 

@@ -23,6 +23,7 @@ extern "C"{
 // factory rest key.
 #define REST_PIN	5// 5
 #define TEST_PIN	4
+#define SREST_PIN 12
 
 #define SOFTAP_SSID_	"ShowTree_"
 #define EEPROM_CONF_ADDRESS (0)

@@ -70,17 +70,24 @@ int m2m_setup(void){
     m2m_int(&conf);
 
 	SYS_Host_info_t *p_host = sys_host_alloc(&hid);
-
+	u8 p_key[32]={0};
+	u16 p_keylen=0;
+	if(esp8266_secretKey_read(p_key,&p_keylen))
+	  {
+		  p_keylen=3;
+		  strcpy((char*)p_key,"123");
+	  }
+	m2m_debug("p_key:%s,p_keylen:%d\r\n",(char*)p_key,p_keylen);
 	if( sys_in_ap_mode() )
-		m2m.net = m2m_net_creat( &device_id,TST_DEV_LOCAL_PORT, strlen(TST_DEV_LOCAL_KEY),TST_DEV_LOCAL_KEY,\
+		m2m.net = m2m_net_creat( &device_id,TST_DEV_LOCAL_PORT, p_keylen,p_key,\
 	                             &hid,NULL, 0,(m2m_func)dev_callback, &obs);
 	else if( p_host ){
 
-		m2m.net = m2m_net_creat( &device_id,TST_DEV_LOCAL_PORT, strlen(TST_DEV_LOCAL_KEY),TST_DEV_LOCAL_KEY,\
+		m2m.net = m2m_net_creat( &device_id,TST_DEV_LOCAL_PORT, p_keylen,p_key,\
 	                             &hid,p_host->cname, p_host->port,(m2m_func)dev_callback, &obs);
 		mfree(p_host);	
 	}else{
-		m2m.net = m2m_net_creat( &device_id,TST_DEV_LOCAL_PORT, strlen(TST_DEV_LOCAL_KEY),TST_DEV_LOCAL_KEY,\
+		m2m.net = m2m_net_creat( &device_id,TST_DEV_LOCAL_PORT, p_keylen,p_key,\
                              &hid,TST_SERVER_HOST, TST_SERVER_PORT,(m2m_func)dev_callback, &obs);
 	}
 
@@ -104,7 +111,6 @@ int m2m_loop(void){
 	// 创建 net ，连接到远端服务器。
     // M2M_Return_T m2m_int(M2M_conf_T *p_conf);
 	m2m_trysync( m2m.net );
-	sys_connect_status_hanle( m2m.net );
         
 	#if 0	
 		if(obs.p_node ){
@@ -121,6 +127,7 @@ void dev_callback(int code, M2M_packet_T **pp_ack_data,void *p_r,void *p_arg){
 	Dev_obs_T *p_devobs = NULL;
 	M2M_packet_T *p_recv_data = (M2M_packet_T*)p_r;
     m2m_log_warn("rcode %d", code);
+	system_soft_wdt_feed();
     //m2m_printf(" application dump 1111 rcode %d\n",code);
     if(p_arg){
 		p_devobs = (Dev_obs_T *)p_arg;
@@ -189,11 +196,20 @@ void dev_callback(int code, M2M_packet_T **pp_ack_data,void *p_r,void *p_arg){
 					}
 					 if(cmd < WIFI_CMD_APP_UART_SEND_RQ ){
 					 	if(p_devobs)
-							sys_cmd_handle( p_devobs->net,cmd, p_data, recv_len, pp_ack_data);  // only  handle system command.
+						sys_cmd_handle( p_devobs->net,cmd, p_data, recv_len, pp_ack_data);  // only  handle system command.
 					 }else
 					 	app_cmd_handle(cmd, p_data, recv_len,pp_ack_data); // handle application command.
                }
 			break;
+		case  M2M_REQUEST_NET_SET_SECRETKEY:
+			  if(p_recv_data && p_recv_data->len > 0 && p_recv_data->p_data)
+			  {		
+			    Enc_T *p_enc=(Enc_T*)p_recv_data->p_data;
+				if(p_enc->keylen>0 && p_enc->keylen<=32)
+				esp8266_secretKey_write(p_enc->key,p_enc->keylen);
+			    m2m_debug("\n\n\n\n\"set new key\r\n\"");
+			  }
+			  break;
         default:
             if( p_recv_data && p_recv_data->len > 0 && p_recv_data->p_data){
                 M2M_packet_T *p_ack = (M2M_packet_T*)mmalloc(sizeof(M2M_packet_T));

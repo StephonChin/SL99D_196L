@@ -302,76 +302,170 @@ void Display_Tree_Fade(void)
 /**
   * FunctionName  Display_str_sparkle
   */
-void Display_Tree_Sparkle(void)
-{
-	uint16_t  i = 0;
-
-	if (Display.Init == true)
+#define SPARKLE_DARK_VAL		3
+#define SPARKLE_GRP_CNT			3
+	void Display_Tree_Sparkle(void)
 	{
-		Display.Init = false;
-
-		Para_Err_Check(&ParaData[SPARKLE]);
-
-		//BrightLevel = PARA_BRIGHT_MAX - ParaData[SPARKLE].Bright + 1;
-		BrightLevel=1;
-		
-		SpeedCtrl = 0;
-		OtherCtrl = 0;
-		TempColor = 0;
-
-		for (i = 0; i < LED_TOTAL; i++)
+		if (Display.Init == true)
 		{
-			TempColor = i % ParaData[SPARKLE].ColorNum;
-			LedData[i].DutyR = ParaData[SPARKLE].Color[TempColor].BufR / 3;
-			LedData[i].DutyG = ParaData[SPARKLE].Color[TempColor].BufG / 3;
-			LedData[i].DutyB = ParaData[SPARKLE].Color[TempColor].BufB / 3;
-
-			ModeTime[i] = 0;
-			LedPick[i] = 0;
-		}
-
-		return;
-	}
-
-	SpeedCtrl++;
-	if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[SPARKLE].Speed))
-	{
-		SpeedCtrl = 0;
-
-		for (i = 0; i < LED_TOTAL; i++)
-		{
-			if (LedPick[i] == 1)
+			Display.Init = false;
+	
+			Para_Err_Check(&ParaData[SPARKLE]);
+	
+			BrightLevel = 1;
+	
+			SpeedCtrl = 0;
+			OtherCtrl = 0;
+			TempColor = 0;
+			
+			for (uint16_t i = 0; i < LED_TOTAL; i++)
 			{
-				LedPick[i] = 0;
-				LedData[i].DutyR /= 3;
-				LedData[i].DutyG /= 3;
-				LedData[i].DutyB /= 3;
+				TempColor = i % ParaData[SPARKLE].ColorNum;
+				LedData[i].DutyR = ParaData[SPARKLE].Color[TempColor].BufR / SPARKLE_DARK_VAL;
+				LedData[i].DutyG = ParaData[SPARKLE].Color[TempColor].BufG / SPARKLE_DARK_VAL;
+				LedData[i].DutyB = ParaData[SPARKLE].Color[TempColor].BufB / SPARKLE_DARK_VAL;
+	
+				ModeTime[i] = 0;
+				LedPick[i] = 0xffff;
 			}
-		}
-
-		uint16_t  j = 0;
-		uint16_t timeout = LED_TOTAL;
-		for (i = 0; i < (ParaData[SPARKLE].Other + 1) * 2; i++)
-		{
-			timeout = LED_TOTAL * 5;
-			do
+	
+			//get the group count
+			switch(ParaData[SPARKLE].Other)
 			{
-				timeout--;
+				case 0: 	RptTotal = 7;		break;
+				case 1: 	RptTotal = 8;		break;
+				case 2: 	RptTotal = 9;		break;
+				case 3: 	RptTotal = 10;		break;
+				case 4: 	RptTotal = 11;		break;
+				case 5: 	RptTotal = 12;		break;
+				case 6: 	RptTotal = 13;		break;
+				case 7: 	RptTotal = 14;		break;
+				case 8: 	RptTotal = 15;		break;
+				case 9: 	RptTotal = 16;		break;
+				default:	RptTotal = 17;		break;
+			}
+			
+	
+			//first , random 5 group led different numbers and save them to LedPick
+			//at the same time, lighten the leds
+			for (uint8_t i = 0; i < SPARKLE_GRP_CNT * RptTotal; i++)
+			{
+				uint16_t j = 0;
+				do
+				{
+					RAND();
+					j = (uint16_t)rand() % LED_TOTAL;
+				}while(LedPick[i] == j);
+				LedPick[i] = j; 		//LedPick save the led number
+	
+				LedData[j].DutyR *= SPARKLE_DARK_VAL;
+				LedData[j].DutyG *= SPARKLE_DARK_VAL;
+				LedData[j].DutyB *= SPARKLE_DARK_VAL;
+			}
+			TempStep = 0;
+	
+			return;
+		}
+	
+	
+		//every 50ms, darken one group LED
+		for (OtherCtrl = 0; OtherCtrl < RptTotal; OtherCtrl++)
+		{
+			uint16_t picknum = TempStep + OtherCtrl * SPARKLE_GRP_CNT;
+			
+			uint16_t led_num = LedPick[picknum];
+			LedData[led_num].DutyR /= SPARKLE_DARK_VAL;
+			LedData[led_num].DutyG /= SPARKLE_DARK_VAL;
+			LedData[led_num].DutyB /= SPARKLE_DARK_VAL; 
+	
+			//get new led numbers and lighten them
+			bool rpt_flag = false;
+			while(1)
+			{
 				RAND();
-				j = (uint16_t)(rand() % LED_TOTAL);
-			} while((LedPick[j] == 1) && timeout);
-
-			//if get valid led number
-			if (timeout != 0)
-			{
-				LedPick[j] = 1;
-				LedData[j].DutyR *= 3;
-				LedData[j].DutyG *= 3;
-				LedData[j].DutyB *= 3;
+				led_num = (uint16_t)rand() % LED_TOTAL;
+	
+				rpt_flag = false;
+				for (uint8_t i = 0; i < SPARKLE_GRP_CNT * RptTotal; i++)
+				{
+					if (LedPick[i] == led_num)
+					{
+						rpt_flag = true;
+					}
+					if (rpt_flag)	break;		//exit for()
+				}
+	
+				if (rpt_flag)	
+				{
+					continue;	//continue while
+				}
+				else
+				{
+					LedPick[picknum] = led_num;
+					LedData[led_num].DutyR *= SPARKLE_DARK_VAL;
+					LedData[led_num].DutyG *= SPARKLE_DARK_VAL;
+					LedData[led_num].DutyB *= SPARKLE_DARK_VAL;
+					break;		//exit while
+				}
 			}
 		}
+	
+		//increase the darken led parameter
+		TempStep++;
+		if (TempStep >= SPARKLE_GRP_CNT)	TempStep = 0;
+		
+		
+		return;
+	
+	
+	
+	
+	
+	
+	
+		
+	#if 0
+		SpeedCtrl++;
+		if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[SPARKLE].Speed))
+		{
+			SpeedCtrl = 0;
+	
+			for (i = 0; i < LED_TOTAL; i++)
+			{
+				if (LedPick[i] == 1)
+				{
+					LedPick[i] = 0;
+					LedData[i].DutyR /= 3;
+					LedData[i].DutyG /= 3;
+					LedData[i].DutyB /= 3;
+				}
+			}
+	
+			uint16_t  j = 0;
+			uint16_t timeout = LED_TOTAL;
+			for (i = 0; i < (ParaData[SPARKLE].Other + 1) * 4; i++)
+			{
+				timeout = LED_TOTAL * 5;
+				do
+				{
+					timeout--;
+					RAND();
+					j = (uint16_t)(rand() % LED_TOTAL);
+				} while((LedPick[j] == 1) && timeout);
+	
+				//if get valid led number
+				if (timeout != 0)
+				{
+					LedPick[j] = 1;
+					LedData[j].DutyR *= 3;
+					LedData[j].DutyG *= 3;
+					LedData[j].DutyB *= 3;
+				}
+			}
+		}
+	#endif
 	}
-}
+
 
 
 /**
@@ -412,7 +506,7 @@ void Display_Tree_Snow(void)
   
   
 	SpeedCtrl++;
-	if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[SNOW].Speed))
+	if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[SNOW].Speed + 2))
 	{
 		SpeedCtrl = 0;
 
@@ -513,10 +607,10 @@ void Display_Tree_Twinkle(void)
 	if (Display.Init == true)
 	{
 		Display.Init = false;
+
 		Para_Err_Check(&ParaData[TWINKLE]);
 
-		//BrightLevel = PARA_BRIGHT_MAX - ParaData[TWINKLE].Bright + 1;
-		BrightLevel=1;
+		BrightLevel = 1;
 
 		SpeedCtrl = 0;
 		OtherCtrl = 0;
@@ -535,7 +629,7 @@ void Display_Tree_Twinkle(void)
 			LedData[i].DutyB = FadeB * j;
 			ModeStep[i] = 0;
 			ModeTime[i] = 0;
-			LedPick[i] = 0;
+			LedPick[i]  = 0;
 
 			ModeFirstFlag = true;
 		}
@@ -543,11 +637,10 @@ void Display_Tree_Twinkle(void)
 		return;
 	}
 
-	
 	if (ModeFirstFlag)
 	{
 		ModeFirstFlag = false;
-		m = 100;
+		m = 80;
 	}
 	else
 	{
@@ -567,7 +660,7 @@ void Display_Tree_Twinkle(void)
 			if (LedPick[i] == 0)
 			{
 				ModeTime[i]++;
-				if (ModeTime[i] >= (i % 3) + 3)
+				if (ModeTime[i] >= ((i % 6) + 2))
 				{
 					ModeTime[i] = 0;
 					switch (ModeStep[i])
@@ -609,7 +702,7 @@ void Display_Tree_Twinkle(void)
 			else
 			{
 				ModeTime[i]++;
-				if (ModeTime[i] >= (i % 5))
+				if (ModeTime[i] >= (i % 8) + 2)
 				{
 					ModeTime[i] = 0;
 					switch (ModeStep[i])
@@ -637,13 +730,13 @@ void Display_Tree_Twinkle(void)
 	}
 
 	//get random leds to flash
-	OtherCtrl++;
-	if (OtherCtrl >= 20)
+	SpeedCtrl++;
+	if (SpeedCtrl >= 30)
 	{
-		OtherCtrl = 0;
+		SpeedCtrl = 0;
 
 		uint16_t	timeout = LED_TOTAL;
-		for (i = 0; i < (ParaData[SPARKLE].Other + 1); i++)
+		for (i = 0; i < (ParaData[TWINKLE].Other + 1); i++)
 		{
 			timeout = LED_TOTAL * 5;
 			do
@@ -2098,7 +2191,7 @@ void Display_Tree_Alternate(void)
 			      } break;
 			      
 			      case 6:{
-			        if (LedData[i].DutyB > 0)    LedData[i].DutyB -= FadeR;
+			        if (LedData[i].DutyB > 0)    LedData[i].DutyB -= FadeB;
 			        else              ModeStep[i] = 1;
 			      } break;
 		    }

@@ -17,12 +17,13 @@
 #include "system.h" 
 #include "app_m2m_handle.h"
 #include "application_cmd_handle.h"
-
+extern SYS_cnn_status g_sys_cnn;
 void setup()
 {
 	
 	application_setup();
 	sys_setup();
+	if(g_sys_cnn!=SYS_CNN_CONFIGING_STA)
     m2m_setup();
 }
 
@@ -30,7 +31,9 @@ void setup()
 void loop()
 {		
 	application_loop();
-	m2m_loop();
+	if(g_sys_cnn!=SYS_CNN_CONFIGING_STA)
+		m2m_loop();
 	system_loop();
+	yield();
 }
 

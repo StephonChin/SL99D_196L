@@ -50,7 +50,7 @@ typedef struct UART_PACKET{
 
 
 #define WIFI_S_VERSION  (0x01)
-#define WIFI_S_VERSION1  (0x01)
+#define WIFI_S_VERSION1  (0x02)
 
 
 int wifi_decode(u8 **pp_dst, u8 *p_cmd, u16 slen, u8 *p_src);

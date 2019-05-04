@@ -232,7 +232,7 @@ void Ws2812_Show(void)
     i2s_word_ptr = Word_Ptr_Get(&first, &byte_cnt, i2s_word_ptr);
     *i2s_word_ptr += (0x00000001 << (31 - byte_cnt));
     i2s_word_ptr = Word_Ptr_Get(&first, &byte_cnt, i2s_word_ptr);
-    if (i2s_word_ptr >= (i2s_buffer2 + NUM_I2S_PIXEL_WORDS2 - 10))   brkflag = true;
+    if ((first == 1) && (i2s_word_ptr >= (i2s_buffer2 + NUM_I2S_PIXEL_WORDS2 - 10)))   brkflag = true;
   }
 
   while(byte_cnt < 32){

@@ -32,19 +32,40 @@ typedef enum SYS_CNN_STATUS{
 
    	SYS_CNN_CONFIGING_AP, 
     SYS_CNN_CONFIGING_STA ,  //1
-    SYS_CNN_LOST_CONNECT ,   //??®™?  ?e
+    SYS_CNN_LOST_CONNECT ,   //??ÔøΩÔøΩ?  ?e
    	SYS_CNN_OTAING, 
-    SYS_CNN_ONLINE,         //?®≤??®¢®¢
+    SYS_CNN_ONLINE,         //?ÔøΩÔøΩ??ÔøΩÔøΩÔøΩÔøΩ
 
 	SYS_CNN_MAX
 }SYS_cnn_status;
+
 typedef struct SYS_HOST_INFO{
 	u16 port;
 	u16 len;
 	M2M_id_T s_id;
 	u8 cname[0];
 }SYS_Host_info_t;
+typedef enum LESP_WIFI_MODE_T{
+	WIFI_MODE_RST_SMT = 0,
+	WIFI_MODE_RST_AP,
+	WIFI_MODE_STA_SMT,
+	WIFI_MODE_STA_PW,
+	WIFI_MODE_MAX
 
+}LESP_WIFI_MODE_T;
+
+typedef struct EEPROM_CONF_T{
+	u8 ver_mak;	// version and mark that identify if the eeprom have been init. 
+	u8 wifi_mod;
+	u8 reset_cnt;	// ÈáçÂêØËÆ°Êï∞Âô®.
+	u8 keylen;
+	u8 p_key[32];
+	
+	SYS_Host_info_t host;
+
+}EEPROM_conf_T;
+u32 esp8266_secretKey_read(u8 *p_key,u16 *p_keylen);
+u32 esp8266_secretKey_write(u8 *p_key,u16 p_keylen);
 void sys_setup(void);
 void sys_factory_reset(void);
 int sys_smartconfig_auto_connet(void);

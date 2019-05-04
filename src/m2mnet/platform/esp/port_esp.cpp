@@ -59,7 +59,7 @@ extern "C" int m2m_receive_filt_addr
 extern "C" u32 m2m_current_time_get(void);
 extern "C" u32 m2m_get_random();
 extern "C" int broadcast_enable(int socket_fd);
-extern "C" int get_bcast_list(u32 *list, int maxlen);
+extern "C" int get_bcast_list(int fd, u32 *list, int maxlen);
 extern "C" u8 *getlocal_ip(void);
 extern "C" void local_ip_save(void);
 
@@ -298,8 +298,10 @@ int m2m_receive_filt_addr
 // 获取系统时间
 u32 m2m_current_time_get(void)
 {
-	yield();
-    return ( millis());
+	//yield();
+    ESP.wdtFeed();
+    u32 curr_tm = (u32)millis();
+    return curr_tm;
 }
 u32 m2m_get_random(){
 	return (u32)os_random();
@@ -308,7 +310,7 @@ u32 m2m_get_random(){
 int broadcast_enable(int socket_fd){
     return 0;
 }
-int get_bcast_list(u32 *list, int maxlen)
+int get_bcast_list(int fd, u32 *list, int maxlen)
 {
   return 0;
 }

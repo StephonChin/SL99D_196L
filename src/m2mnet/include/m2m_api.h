@@ -138,6 +138,20 @@ void sample_notify_handle_callback(int code,M2M_packet_T **pp_ack_data,M2M_obs_p
 ** 
 *****************************************************/
 void sample_normal_callback(int code,M2M_packet_T **pp_ack_pkt, M2M_packet_T *p_recv_pkt,void *p_arg);
+#ifdef CONF_BROADCAST_ENABLE_2
+//  广播设备.
+/*****************************************************
+** description: 在局域网下发送广播包，扫描设备。
+** args:
+**      1. p_m2m - 发送该请求的 net/session。
+**      2. p_id -  要查询的设备 id.
+**      2. p_user_func - 接收到对端响应时触发的回调函数.
+** return: 本地发送是否成功.
+*****************************************************/
+M2M_Return_T m2m_user_broadcast_start(size_t p, int remote_port, u8 *p_key, u8 *p_data, int len, m2m_func func, void *p_args);
+M2M_Return_T m2m_user_broadcast_stop(size_t p);
+
+#endif
 
 #ifdef __cplusplus
 }

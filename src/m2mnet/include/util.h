@@ -61,18 +61,14 @@
 #define CHAR_BELONG(c,a,b)  ( a <= c && c <=b)
 #define BYTE_IS_HEX(c)   (('0'<= c && c<='9')|| ('a'<=c && c <= 'f') || ('A'<=c && c <= 'F'))
 #define CHAR_2_INT(n,c)  n = (CHAR_BELONG(c,'0','9')?(c-'0'):( CHAR_BELONG(c, 'a', 'f')?(c-'a'+10):( CHAR_BELONG(c,'A','F')?(c-'A' + 10):n) ) )
-#if 0
-#define STR_2_INT_ARRAY(d,s,len) do{ int i=0; \
-                                 for(i=0;i<len;i++){ CHAR_2_INT(d[i],s[i]);} }while(0)
+#if 1
 
-#define STR_2_INT_ARRAY_ORDER(d,s,len) 	do{ int i=0; \
-											for(i=0;i<len;i++){ CHAR_2_INT(d[i],s[ (len-i -1) ]);} }while(0)
-#define STR_2_HEX_ARRAY(d,s,len)		do{ int i,j; \
-											for(i=0,j=0; i<len;i++,j++){ \
-												d[j] = ( (i+1) > len )?s[i]:( ( 16 *((int)s[i+1]) ) + s[i]); i++;}\
-										}while(0)
-
-#endif
+#define STR_2_HEX_ARRAY(d,dlen,s, slen) do{  int i,j; \
+											 for( i=0, j=0; j< slen; j++){ u8 h,l; \
+												CHAR_2_INT(h,s[j]);j++; \
+												if(j < slen){CHAR_2_INT(l,s[j]); d[i] = 16 * h + l; i ++;}\
+												else{ d[i] = h;i ++; break;}} \
+													dlen = i; }while(0)
 
 #define STR_2_HEX_ARRAY_INV(d,dlen,s, slen) do{ int i,j; \
 									 for( i=dlen -1, j=slen-1; j>=0;j--){ u8 h,l; \
@@ -81,13 +77,17 @@
 										else{ d[i] = l; break;} \
 										i--;} }while(0)
 
+#define STR_2_INT_ARRAY(d,s,len) do{ int i=0; \
+                                 for(i=0;i<len;i++){ CHAR_2_INT(d[i],s[i]);} }while(0)
+
+#define STR_2_INT_ARRAY_ORDER(d,s,len) 	do{ int i=0; \
+											for(i=0;i<len;i++){ CHAR_2_INT(d[i],s[ (len-i -1) ]);} }while(0)
+
+#endif
 #define HEX_2_CHAR(c,n)	c = (n >= 10)?(n-10+'a'):(n + '0');
 #define HEX_2_STR(d,s,len)	do{	int i,j;for(i=0,j=0;i<len;i++,j++){\
 									d[j] =s[i]/16; HEX_2_CHAR(d[j],d[j]);j++;d[j] = s[i]%16; HEX_2_CHAR(d[j],d[j]);}\
 								}while(0)
-#define HEX_2_STR(d,s,len)	do{	int i,j;for(i=len-1,j=0;i>=0;i--,j++){\
-										d[j] =s[i]/16; HEX_2_CHAR(d[j],d[j]);j++;d[j] = s[i]%16; HEX_2_CHAR(d[j],d[j]);}\
-									}while(0)
 
 #define malloc_cpy(d,dlen,s,slen,ret)	do{ if(d && s && slen > 0){\
 											d = mmalloc(slen);\
@@ -112,7 +112,6 @@ int product_id_pid_metch(u8 *p_id,   u32 pid);
 
 void product_id_print(u8 *p_id);
 void byte_printf(u8 *p_had,u8 *p_byte, int len);
-
 
 #ifdef __cplusplus
 }

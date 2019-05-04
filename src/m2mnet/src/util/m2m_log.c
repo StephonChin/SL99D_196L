@@ -14,7 +14,7 @@
 #include "../../include/m2m_log.h"
 #include "../../include/util.h"
 
-u8 g_log_level = M2M_LOG_ERROR;
+u8 g_log_level = M2M_LOG_NONE;
 
 #ifdef CONF_LOG_TIME
 void current_time_printf(void){
@@ -168,10 +168,7 @@ u8 m2m_record_level_get(){
 void m2m_bytes_dump(u8 *p_shd,u8 *p,int len){
 
     int i ;
-	//if(g_log_level >=  M2M_LOG_WARN )
-	//	return ;
     m2m_printf("%s ",p_shd);
-
     for(i=0;i<len;i++)
         m2m_printf("[%x]",p[i]);
     m2m_printf(" >>end\n");

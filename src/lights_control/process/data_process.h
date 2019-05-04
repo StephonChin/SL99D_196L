@@ -35,22 +35,29 @@
 
 
 
-
 /*
  * command value(from app to device)
  */
 #define     CHECK_ALL_STATUS_CMD        (uint8_t)0x01
 #define     CHECK_MODE_STATUS_CMD       (uint8_t)0x02
 #define     CHECK_NAME_STATUS_CMD       (uint8_t)0x03
+
 #define     SET_ON_OFF_CMD              (uint8_t)0x10
 #define     SET_MODE_CMD                (uint8_t)0x11
 #define     SET_COLOR_CMD               (uint8_t)0x12
 #define     SET_CNTDWN_HOUR_CMD         (uint8_t)0x13
 #define     SET_CNTDWN_TIME_CMD         (uint8_t)0x14
 #define     SET_PASSWORD_CMD            (uint8_t)0x15
+
 #define 	LAYOUT_ENTER_CMD			(uint8_t)0x20
 #define		LAYOUT_TEST_CMD				(uint8_t)0x21
 #define		LAYOUT_SAVE_CMD				(uint8_t)0x22
+#define 	LAYOUT_SEC_CTRL				(uint8_t)0x28
+#define 	LAYOUT_MOD_CTRL				(uint8_t)0x29
+#define 	LAYOUT_DOT_CTRL				(uint8_t)0x2a
+#define 	LAYOUT_DOT_NOADD_CTRL		(uint8_t)0x2b
+#define 	LAYOUT_DOT_NOADD_CTRL_2		(uint8_t)0x2c
+
 #define     VOICE_SET_ON_OFF_CMD        (uint8_t)0x60
 #define     VOICE_SET_MODE_CMD          (uint8_t)0x61
 #define     VOICE_SET_COLOR_CMD         (uint8_t)0x62
@@ -58,6 +65,7 @@
 #define     VOICE_SET_CNTDWN_HOUR_CMD   (uint8_t)0x64
 #define     VOICE_SET_CNTDWN_TIME_CMD   (uint8_t)0x65
 #define     VOICE_MSC_EN_CMD            (uint8_t)0x66
+
 #define     RENAME_DEVICE_CMD           (uint8_t)0x7f
 
 #define		VOICE_ON_NEW				(uint8_t)0x40
@@ -71,8 +79,6 @@
 /*
  * ack command value(from device to app)
  */
-#define     APP_PACK_CLEAR
-#define     APP_PACK_SIZE_MAX       (uint8_t)72
 #define     ALL_STATUS_ACK          (uint8_t)0x81
 #define     MODE_STATUS_ACK         (uint8_t)0x82
 #define     NAME_STATUS_ACK         (uint8_t)0x83
@@ -81,6 +87,12 @@
 #define		LAYOUT_ENTER_ACK		(uint8_t)0xa0
 #define		LAYOUT_TEST_ACK			(uint8_t)0xa1
 #define		LAYOUT_SAVE_ACK			(uint8_t)0xa2
+#define 	LAYOUT_SEC_CTRL_ACK				(uint8_t)0xa8
+#define 	LAYOUT_MOD_CTRL_ACK				(uint8_t)0xa9
+#define 	LAYOUT_DOT_CTRL_ACK				(uint8_t)0xaa
+#define 	LAYOUT_DOT_NOADD_CTRL_ACK		(uint8_t)0xab
+#define 	LAYOUT_DOT_NOADD_CTRL_2_ACK		(uint8_t)0xac
+
 #define		NAME_MODIFY_ACK			(uint8_t)0xff
 
 /*
@@ -151,12 +163,12 @@
 
 
 //typedef
-#define	MCU_PROTOCOL_VER			0x11
-#define	MCU_TIMER_CMD				0x1
-#define	MCU_MODE_CMD				0x2
-#define	MCU_MUSIC_EN_CMD			0x3
-#define	MCU_MUSIC_LOW				0x11
-#define	MCU_UART_PACK_HEADER		4
+#define		MCU_PROTOCOL_VER				0x11
+#define		MCU_TIMER_CMD					0x1
+#define		MCU_MODE_CMD					0x2
+#define		MCU_MUSIC_EN_CMD				0x3
+#define		MCU_MUSIC_LOW					0x11
+#define		MCU_UART_PACK_HEADER			4
 typedef struct
 {
   uint8_t   ver;
@@ -177,16 +189,19 @@ typedef struct
 
 
 #define APP_PACK_HEADER_BYTE		8
+#define	APP_PACK_LEN_MAX			1000
+#define APP_PACK_SIZE_MAX       	(APP_PACK_HEADER_BYTE+APP_PACK_LEN_MAX)
+
 typedef struct
 {
   uint8_t   type;
   uint8_t   ver;
-  uint16_t  password;
+  uint8_t  	reserve;
   uint8_t   index;
   uint8_t   chksum;
   uint8_t   cmd;
-  uint8_t   len;
-  uint8_t   payload[1000];
+  uint16_t  len;
+  uint8_t   payload[APP_PACK_LEN_MAX];
 }_type_app_pack;
 
 
@@ -219,9 +234,9 @@ void 		Key_Process(void);
 void 		Count_Down_Process(void);
 void 		Mcu_com_process(void);
 void 		App_data_prcoess(void);
-void 		res_to_app(uint8_t cmd,const uint8_t *pdata, uint8_t len);
-uint16_t	CRC16_Cal(uint8_t* Buffer, uint8_t len);
-uint8_t   chksum_cal(const uint8_t *src, uint8_t len);
+void 		res_to_app(uint8_t cmd,const uint8_t *pdata, uint16_t len);
+uint16_t	CRC16_Cal(uint8_t* Buffer, uint16_t len);
+uint8_t   chksum_cal(const uint8_t *src, uint16_t len);
 void      	Color_Caculate(uint8_t *rtR, uint8_t *rtG, uint8_t *rtB, uint8_t rIn, uint8_t gIn, uint8_t bIn);
 uint8_t   	Color_Value_Get(uint8_t ColorNumBuf);
 

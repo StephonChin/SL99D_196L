@@ -71,11 +71,11 @@ size_t m2m_net_creat( M2M_id_T *p_id,int port, int key_len, u8 *p_key, M2M_id_T 
     cmd.callback.p_user_arg = p_args;
     cmd.enc.type = m2m_conf.def_enc_type;
 
-	if(key_len < 16){
-		p_key_alloc = (u8*)mmalloc(17);
+	if(key_len < ENC_KEY_LEN){
+		p_key_alloc = (u8*)mmalloc(ENC_KEY_LEN + 1);
 		_RETURN_EQUAL_0(p_key_alloc, 0);
 		mcpy(p_key_alloc, p_key, key_len);
-		cmd.enc.keylen = 16;
+		cmd.enc.keylen = ENC_KEY_LEN;
 		cmd.enc.p_enckey = p_key_alloc;
 	}else{
 		cmd.enc.keylen = key_len;
@@ -125,7 +125,7 @@ M2M_Return_T m2m_net_host_update(size_t net, M2M_id_T *p_id,u8 *p_host, int port
 	if( arg.p_net->ioctl_session )
     	return arg.p_net->ioctl_session( M2M_NET_CMD_HOST_UPDATE, &arg,0);
 	else
-		return M2M_ERR_NULL; 
+		return M2M_ERR_NULL;
 }
 
 M2M_Return_T m2m_net_secretkey_set(size_t net,M2M_id_T *p_id,u8 *p_host,int port, int key_len,u8 *p_key,
@@ -200,7 +200,7 @@ size_t m2m_session_creat(size_t net,M2M_id_T *p_id,u8 *p_host,int port, int key_
     arg.p_net = NULL;
     Session_T *p_s = NULL;
 
-	u8 tmp_key[20], tmp_newkey[20];
+	u8 tmp_key[ENC_KEY_LEN + 1], tmp_newkey[ENC_KEY_LEN + 1];
 	_RETURN_EQUAL_0(net, 0);
 	mmemset( (u8*)&arg, 0, sizeof(Net_Args_T));
     mcpy( (u8*) &arg.remote_id, (u8*)p_id,sizeof(M2M_id_T));
@@ -225,11 +225,11 @@ size_t m2m_session_creat(size_t net,M2M_id_T *p_id,u8 *p_host,int port, int key_
 
     // get secret key
     arg.enc.type = m2m_conf.def_enc_type;
-	if(key_len < 16){
-			mmemset( tmp_key, 0, 20);
+	if(key_len < ENC_KEY_LEN ){
+			mmemset( tmp_key, 0, ENC_KEY_LEN +1);
 			mcpy(tmp_key, p_key, key_len);
 			arg.enc.p_enckey = tmp_key;
-			arg.enc.keylen = 16;
+			arg.enc.keylen = ENC_KEY_LEN;
 		}else{
 			arg.enc.p_enckey = p_key;
 			arg.enc.keylen = key_len;
@@ -372,7 +372,7 @@ M2M_Return_T m2m_broadcast_data_start(size_t        p,int port,int len,u8 *p_dat
     arg.enc.type = M2M_ENC_TYPE_BROADCAST;
     if( p_n->ioctl_session )
         ret = p_n->ioctl_session( M2M_NET_CMD_BROADCAST_START, &arg,0);
-    
+
     m2m_log_debug("net <%p> start to broadcast ...",p_n);
     return ret;
 }
@@ -554,6 +554,69 @@ M2M_Return_T m2m_dev_online_check(size_t p, u8 *p_remoteHost, int remote_port, M
         return 0;
 
 }
+#ifdef CONF_BROADCAST_ENABLE_2
+//  广播设备.
+/*****************************************************
+** description: 在局域网下发送广播包，扫描设备。
+** args:
+**      1. p_m2m - 发送该请求的 net/session。
+**      2. p_id -  要查询的设备 id.
+**      2. p_user_func - 接收到对端响应时触发的回调函数.
+** return: 本地发送是否成功.
+*****************************************************/
+M2M_Return_T m2m_user_broadcast_start(size_t p, int remote_port, u8 *p_key, u8 *p_data, int len, m2m_func func, void *p_args){
+    Net_Args_T arg;
+	u8 tmp[32];
+    if(!p)
+        return M2M_ERR_INVALID;
+    
+    Net_T *p_net = (Net_T*)p;
+    mmemset((u8*)&arg,0,sizeof(Net_Args_T));
+    mmemset(&tmp, 0, 32);
+	
+    arg.p_net = (Net_T*) p_net;        
+    arg.callback.func = func;   
+    arg.callback.p_user_arg = p_args; 
+    arg.remote.p_host = NULL;
+    arg.remote.dst_address.port = remote_port;
+    arg.len = len;
+    arg.p_data = p_data;
+	if(p_key){
+		arg.enc.type = M2M_ENC_TYPE_AES128;
+		arg.enc.p_enckey =  p_key;
+		if(strlen(p_key) < ENC_KEY_LEN ){
+			arg.enc.keylen = ENC_KEY_LEN;
+			mcpy(&tmp, p_key, strlen(p_key));
+			arg.enc.p_enckey = &tmp;
+		}else 
+			arg.enc.keylen = strlen(p_key);		
+	}else
+		mcpy((u8*)&arg.enc, (u8*)&p_net->enc, sizeof(Net_enc_T) );    
+
+	m2m_log_debug("net <%p> start to send device user broadcast request.",p_net);
+
+    if( arg.p_net->ioctl_session)
+        return ( arg.p_net->ioctl_session( M2M_NET_CMD_USER_BROADCAST_START,&arg,0) );
+    else 
+        return 0;
+
+}
+M2M_Return_T m2m_user_broadcast_stop(size_t p){
+    int ret = 0;
+    if( !p)
+        return M2M_ERR_INVALID;
+    
+    Net_T *p_n = (Net_T*)p;
+	m2m_log_debug("stop cb %p", p_n->ioctl_session);
+    if( p_n->ioctl_session )
+        ret = p_n->ioctl_session( M2M_NET_CMD_USER_BROADCAST_STOP, p_n,0);
+    
+    m2m_log_debug("net <%p>user broadcast stop.",p_n);
+    return ret;
+}
+
+#endif // CONF_BROADCAST_ENABLE_2
+
 /*****************************************************
 ** description: 设备掉线事件报告
 ** args:

@@ -86,7 +86,11 @@ typedef enum{
     
     COAP_OPT_BROADCAST_RQ  = 0X10,
     COAP_OPT_BROADCAST_ACK = 0X11,
-    COAP_OPT_MAX
+
+	COAP_OPT_USER_BROADCAST_RQ  = 0X12,
+    COAP_OPT_USER_BROADCAST_ACK = 0X13,
+
+	COAP_OPT_MAX
 
 }COAP_OPTION_TYPE;
 
@@ -227,8 +231,9 @@ static int _proto_m2m_request_send(
     _PROTO_RQ_ROUTER_HDR( p_router,p_args );
     // 3. 加密.
     _COAP_SECRET_BUILD(p_router,p_args->p_enc,payload_dec_len,p_pdu->hdr, p_pdu->length);
-
+	//  
     //m2m_bytes_dump("proto data pdu dump: ", p_pdu->hdr,p_pdu->length);
+    //  
 #if 0
    {
         u8 opt_type ,opt_len, *p_opt;
@@ -407,7 +412,7 @@ static int _recv_packet_illegal(Router_hdr_T *p_r){
 static int pkt_receive(M2M_proto_recv_rawpkt_T *p_rawpkt,int flags){
 
     int ret = 0;
-    //int tmp = _PROTO_LEN(0,0);
+    int tmp = _PROTO_LEN(0,0);
     ret = m2m_receive( p_rawpkt->socket_fd,&p_rawpkt->remote,p_rawpkt->payload.p_data,p_rawpkt->payload.len,M2M_SOCKET_RECV_TIMEOUT_MS);
     if(ret < 20 ){
         // haven't receive anything, or there is no data.
@@ -536,6 +541,18 @@ static M2M_Return_T _proto_m2m_cmd_parse(coap_pdu_t *p_pdu_recv,M2M_proto_dec_re
 		    p_dec->cmd = M2M_PROTO_CMD_BROADCAST_ACK;
 		    break;
 #endif //CONF_BROADCAST_ENABLE
+#ifdef CONF_BROADCAST_ENABLE_2               
+		case COAP_OPT_USER_BROADCAST_RQ:
+			opt_get = 1;
+			m2m_debug_level(M2M_LOG_DEBUG, "receive cmd = User Broadcast request");
+			p_dec->cmd = M2M_PROTO_CMD_BROADCAST_2_RQ;
+			break;
+		case COAP_OPT_USER_BROADCAST_ACK:
+			opt_get = 1;
+			m2m_debug_level(M2M_LOG_DEBUG, "receive cmd = User Broadcast request ack");
+			p_dec->cmd = M2M_PROTO_CMD_BROADCAST_2_ACK;
+			break;
+#endif //CONF_BROADCAST_ENABLE
 
 		case COAP_OPT_OBSERVER_RQ:
 		  m2m_debug_level(M2M_LOG_DEBUG, "receive cmd = observer request");
@@ -662,6 +679,7 @@ static int pkt_decode( M2M_dec_args_T *p_a,int flags){
     return  M2M_ERR_NOERR;
 
 }
+
 #ifdef CONF_BROADCAST_ENABLE
 static M2M_Return_T broadcast_rq(M2M_Proto_Cmd_Arg_T *p_args,int flags){
     int num,i,send_len = 0 ;
@@ -675,7 +693,7 @@ static M2M_Return_T broadcast_rq(M2M_Proto_Cmd_Arg_T *p_args,int flags){
     broadcast_enable(p_args->socket_fd);
     // 获取子网掩码列表,每个子网发一次广播
     remote_addr.port = p_args->address.port;
-    num = get_bcast_list(iplist, 4);
+    num = get_bcast_list(p_args->socket_fd, iplist, 4);
     for(i = 0; i < num; i++)
     {
         // 关于端口号: 此处的端口是客户端的端口
@@ -692,6 +710,40 @@ static M2M_Return_T broadcast_ack(M2M_proto_ack_T *p_ack, int flags){
     return _proto_m2m_ack_send(p_ack, COAP_OPT_BROADCAST_ACK, p_ack->payload.len,p_ack->payload.p_data,0, NULL);
 }
 #endif  //CONF_BROADCAST_ENABLE
+
+#ifdef CONF_BROADCAST_ENABLE_2
+static M2M_Return_T user_broadcast_rq(M2M_Proto_Cmd_Arg_T *p_args,int flags){
+    int num,i,send_len = 0 ;
+    u32 iplist[4];
+    M2M_Address_T remote_addr;
+    u8 *p_pkt = NULL;
+
+    router_package_creat(&p_pkt,&send_len,p_args, COAP_OPT_USER_BROADCAST_RQ, p_args->payloadlen, p_args->p_payload,0,NULL);
+
+    // 使能 广播.
+    broadcast_enable(p_args->socket_fd);
+    // 获取子网掩码列表,每个子网发一次广播
+    remote_addr.port = p_args->address.port;
+    num = get_bcast_list(p_args->socket_fd, iplist, 4);
+    for(i = 0; i < num; i++)
+    {
+        // 关于端口号: 此处的端口是客户端的端口
+        mcpy( (u8*)remote_addr.ip, (u8*)&iplist[i], 4);
+        remote_addr.len  = 4;
+        m2m_send(p_args->socket_fd, &remote_addr, p_pkt,send_len);
+    }
+
+    MFREE(p_pkt);
+    return M2M_ERR_NOERR;
+}
+// 广播包无需任何的 协议封装以及加密.
+static M2M_Return_T user_broadcast_ack(M2M_proto_ack_T *p_ack, int flags){
+	m2m_printf("ack .. \n");
+    return _proto_m2m_ack_send(p_ack, COAP_OPT_USER_BROADCAST_ACK, p_ack->payload.len,p_ack->payload.p_data,0, NULL);
+}
+
+#endif  //CONF_BROADCAST_ENABLE
+
 
 int onlinkchek_rq(M2M_Proto_Cmd_Arg_T *p_args,int flags){
 
@@ -776,6 +828,14 @@ m2m_func _m2m_protocol_funcTable[M2M_PROTO_CMD_MAX + 1] =
     (m2m_func)onlinkchek_rq,
     // M2M_PROTO_IOC_CMD_ONLINK_CHECK_ACK
     (m2m_func)onlinkchek_ack,
+#ifdef CONF_BROADCAST_ENABLE_2
+	//M2M_PROTO_IOC_CMD_BROADCAST_2_SEND
+	(m2m_func)user_broadcast_rq, 			  // 17
+	// M2M_PROTO_IOC_CMD_BROADCAST_2_SEND
+	(m2m_func)user_broadcast_ack,				// 18
+
+#endif
+
     NULL
 };
 // 获取协议处理函数.

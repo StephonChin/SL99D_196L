@@ -12,18 +12,18 @@ extern cntdwn_T	cntdwn_data;
 
 
 //global parameters
-uint8_t           ColorData[20][3];
-_type_app_pack    app_pack, app_ack_pack;
+uint8_t           	ColorData[20][3];
+_type_app_pack    	app_pack, app_ack_pack;
 _type_voice_cmd		voice_cmd;
 
 
 
 // File Parameters
 _type_status    	AllStatus;
-uint16_t    		pw_chksum;
 uint8_t				name_chksum;
 _type_mcu_uart  	mcu_rcv_pack;
-
+bool				mode_change_flag;
+uint16_t			mode_change_time;
 
 
 int sys_eeprom_read(int address, u8 *p_buf, int len);
@@ -187,7 +187,8 @@ void User_Data_Init(void)
 	{
 		#if USER_DATA_EN==1
 		power = 0xaa;
-		sys_eeprom_write(POWER_FIRST_OFFSET, (uint8_t *)&power, POWER_FIRST_LEN);
+		sys_eeprom_write(POWER_FIRST_OFFSET, (uint8_t *)&power, POWER_FIRST_LEN);
+
 		#endif
 
 		Display.LayoutNum 		= LAYOUT_2D;
@@ -207,7 +208,6 @@ void User_Data_Init(void)
 		//sys_eeprom_write(CNTDWN_OFFSET, (uint8_t *)&cntdwn_data.cntdwn_hour, CNTDWN_LEN);
 		#endif
 
-		pw_chksum = 0;
 		#if USER_DATA_EN==1
 		//sys_eeprom_write(PASSWORD_OFFSET, (uint8_t *)&pw_chksum, PASSWORD_LEN);
 		#endif
@@ -469,10 +469,16 @@ void Key_Process(void)
 				Display.ModeBuf = 0;
 				Display.Mode = POWER_OFF;
 			}
-			else                            Display.Mode = Display.ModeBuf;
+			else
+			{
+				Display.Mode = Display.ModeBuf;
+			}
 		}
 
 		Display.Init = true;
+
+		mode_change_flag = true;
+		mode_change_time = 0;
 		
 		//load to user buffer
 		#if USER_DATA_EN==1
@@ -496,6 +502,8 @@ void Key_Process(void)
 
 		i = Display.Mode;
 
+		mode_change_flag = true;
+		mode_change_time = 0;
 
 		if ((i != POWER_OFF) && (i != RAINBOW) && (i != COLOR_RAND) && (i != CARNIVAL) && (i != ALTERNATE))
 		{
@@ -539,12 +547,9 @@ void Key_Process(void)
 	{
 		KeyColor = KEY_IDLE;
 
-		if (Display.Mode != POWER_OFF)
-		{
-			cntdwn_data.cntdwn_hour++;
-			if (cntdwn_data.cntdwn_hour > 8)	cntdwn_data.cntdwn_hour = 0;
-			cntdwn_data.init = true;
-		}
+		cntdwn_data.cntdwn_hour++;
+		if (cntdwn_data.cntdwn_hour > 8)	cntdwn_data.cntdwn_hour = 0;
+		cntdwn_data.init = true;
 	}
 }
 
@@ -591,6 +596,17 @@ void Mcu_com_process(void)
 	static uint8_t	mode_pre = 0xff;
 	static uint8_t	snd_index = 0x1;
 
+
+	//check the mode change
+	if (mode_change_flag)
+	{
+		mode_change_time++;
+		if (mode_change_time >= 500)//5s
+		{
+			mode_change_time = 0;
+			mode_change_flag = false;
+		}
+	}
 
 	//send data
 	//when the mode has changed or timer count down hour changed
@@ -639,11 +655,28 @@ void Mcu_com_process(void)
 		}
 		else if (len_pre > 0)
 		{
+		#if 0
 			dst = (uint8_t *)&mcu_rcv_pack;
 
 			//deal the received data
-			uart_write(uart0, (const char *)dst, len_pre);
-			
+			//uart_write(uart0, (const char *)dst, len_pre);
+			if (mcu_rcv_pack.cmd >= MCU_MUSIC_LOW)
+			{
+				if (!mode_change_flag)
+				{
+					if (Display.Mode != MUSIC_MODE  && Display.Mode <= MODE_MAX)
+					{
+						Display.Mode = MUSIC_MODE;
+						Display.Init = true;
+					}
+
+					MusicUpdateFlag = true;
+
+					LayerStep = (mcu_rcv_pack.cmd - 0x10);
+					if (LayerStep > LayerMax)	LayerStep = LayerMax;
+				}
+			}
+		#endif
 			len_pre = 0;
 		}
 	}
@@ -716,6 +749,9 @@ void App_data_prcoess(void)
 					Display.Mode = i;
 					Display.ModeBuf = i;
 					Display.Init = true;
+
+					mode_change_flag = true;
+					mode_change_time = 0;
 				}
 			}break;
 
@@ -724,6 +760,9 @@ void App_data_prcoess(void)
 				if (voice_cmd.len != 1)	break;
 				uint8_t i = voice_cmd.payload[0];	//get the color value
 				if (i > COLOR_VAL_MAX + THEME_VAL_MAX)		break;
+
+				mode_change_flag = true;
+				mode_change_time = 0;
 
 				//save the color values to ParaData
 				uint8_t j = Display.Mode;
@@ -749,7 +788,7 @@ void App_data_prcoess(void)
 
 			case VOICE_TIMER_NEW:
 			{
-
+				
 			}break;
 		}
 		#endif
@@ -758,34 +797,33 @@ void App_data_prcoess(void)
 	//receive data from APP
 	else if (app_pack.type == PRODUCT_TYPE)
 	{
+		//m2m_printf("===== p = %p\n", app_pack);
 		//check the app pack update
 		if ((app_pack.index > 0) && (index_rcv_pre != app_pack.index))
 		{
 			index_rcv_pre = app_pack.index;
 			index_rcv_time = 0;
 
+
 			//if the type or the protocol version is mismatch
 			if ((app_pack.type != PRODUCT_TYPE)
 			|| (app_pack.ver != APP_PROTOCOL_VER))
 			{
 				app_pack.index = 0;
+				//printf("==ERROR==version or type mismath!");
 				return; 
-			}
-
-			//check the password
-			if (app_pack.password != pw_chksum)
-			{
-				m2m_bytes_dump((u8 *)"password is mismatch:", (u8 *)&app_pack.password, 2);
-				return;
 			}
 
 
 			//check the checksum value
 			uint8_t*  p = (uint8_t *)&app_pack;
 			uint8_t i = chksum_cal((const uint8_t *)p, app_pack.len + APP_PACK_HEADER_BYTE);
+			
 			if (i != 0)
 			{
 				app_pack.index = 0;
+
+				//printf("==ERROR==index mismath!");
 				return;
 			}
 
@@ -797,199 +835,449 @@ void App_data_prcoess(void)
 			{
 
 				case CHECK_ALL_STATUS_CMD:
-					{
-						//get the real time
-						uint8_t len = app_pack.len;
-						if (len != 3)		break;	//exit when the length is mismath
-						
-						uint8_t hour = app_pack.payload[0];
-						uint8_t minute = app_pack.payload[1];
-						uint8_t second = app_pack.payload[2];
-						if (hour >= 24 || minute >= 60 || second >= 60)		break;		//the wrong time
+				{
+					//get the real time
+					uint16_t len = app_pack.len;
+					if (len != 3)		break;	//exit when the length is mismath
+					
+					uint8_t hour = app_pack.payload[0];
+					uint8_t minute = app_pack.payload[1];
+					uint8_t second = app_pack.payload[2];
+					if (hour >= 24 || minute >= 60 || second >= 60)		break;		//the wrong time
 
-						cntdwn_data.real_hour = hour;
-						cntdwn_data.real_min = minute;
-						cntdwn_data.real_sec = second;
-						
-						//reply
-						len = MODE_MAX + ALL_STATUS_PACK_BYTE;
-						uint8_t *src = (uint8_t *)&AllStatus;
-						res_to_app(ALL_STATUS_ACK, (const uint8_t *)src, len);
-					} break;
+					cntdwn_data.real_hour = hour;
+					cntdwn_data.real_min = minute;
+					cntdwn_data.real_sec = second;
+					
+					//reply
+					len = MODE_MAX + ALL_STATUS_PACK_BYTE;
+					uint8_t *src = (uint8_t *)&AllStatus;
+					res_to_app(ALL_STATUS_ACK, (const uint8_t *)src, len);
+				} break;
 
 				case CHECK_MODE_STATUS_CMD:
-					{
-						uint8_t i = app_pack.payload[0];
-						//exit if the inquire mode value is more than upper limiting value
-						if (i > MODE_MAX)   break;
+				{
+					uint8_t i = app_pack.payload[0];
+					//exit if the inquire mode value is more than upper limiting value
+					if (i > MODE_MAX)   break;
 
-						uint8_t len = ParaData[i].Chksum * 3 + PARA_PACK_HEADRE_BYTE;
-						uint8_t *src = (uint8_t *)&ParaData[i];
-						res_to_app(MODE_STATUS_ACK, (const uint8_t *)src, len);
-					}break;
+					uint16_t len = ParaData[i].Chksum * 3 + PARA_PACK_HEADRE_BYTE;
+					uint8_t *src = (uint8_t *)&ParaData[i];
+					res_to_app(MODE_STATUS_ACK, (const uint8_t *)src, len);
+				}break;
 
 				case CHECK_NAME_STATUS_CMD:
+				{
+					uint8_t *pname = (uint8_t *)malloc(NAME_LEN);
+					uint16_t	len = 0;
+
+					if (pname != NULL)
 					{
-						uint8_t *pname = (uint8_t *)malloc(NAME_LEN);
-						uint8_t	len = 0;
+						sys_eeprom_read(NAME_OFFSET, (uint8_t *)pname, NAME_LEN);
 
-						if (pname != NULL)
+						//get the name real length
+						uint8_t *p = pname;
+						while (*pname != '\0')
 						{
-							sys_eeprom_read(NAME_OFFSET, (uint8_t *)pname, NAME_LEN);
-
-							//get the name real length
-							uint8_t *p = pname;
-							while (*pname != '\0')
-							{
-								p++;
-								len++;
-							}
-
-							//reply
-							res_to_app(NAME_STATUS_ACK, (const uint8_t *)pname, len);
-
-							//free the memory
-							free(pname);
-							pname = NULL;
+							p++;
+							len++;
 						}
-						else
-						{
-							m2m_bytes_dump((u8 *)"==ERR== pname require memory error", NULL, 0);
-						}
-					}break;
+
+						//reply
+						res_to_app(NAME_STATUS_ACK, (const uint8_t *)pname, len);
+
+						//free the memory
+						free(pname);
+						pname = NULL;
+					}
+					else
+					{
+						m2m_bytes_dump((u8 *)"==ERR== pname require memory error", NULL, 0);
+					}
+				}break;
 
 				//0 - turn off
 				//1 - turn on
 				case SET_ON_OFF_CMD:
+				{
+					if (app_pack.len == 1)
 					{
-						if (app_pack.len == 1)
+						if (app_pack.payload[0] && Display.Mode == POWER_OFF)
 						{
-							if (app_pack.payload[0] && Display.Mode == POWER_OFF)
-							{
-								Display.Mode	= POWER_ON;
-								Display.Init 	= true;
-							}
-							else if (!app_pack.payload[0] && Display.Mode != POWER_OFF)
-							{
-								Display.Mode = POWER_OFF;
-								Display.Init = true;
-							}
+							Display.Mode	= POWER_ON;
+							Display.Init 	= true;
+							mode_change_flag = true;
+							mode_change_time = 0;
 						}
-					}break;
+						else if (!app_pack.payload[0] && Display.Mode != POWER_OFF)
+						{
+							Display.Mode = POWER_OFF;
+							Display.Init = true;
+							mode_change_flag = true;
+							mode_change_time = 0;
+						}
+					}
+				}break;
 
 				//set mode
 				//mode value, speed, bright level or other control value
 				case SET_MODE_CMD:
-					{
-						uint8_t   i = app_pack.payload[0];  //mode
-						uint8_t   j = app_pack.payload[1];  //speed
-						uint8_t   k = app_pack.payload[2];  //bright level
-						uint8_t   l = app_pack.payload[3];  //other
-						if (i > MODE_MAX)    break;
-						if (j > PARA_SPEED_MAX || k > PARA_BRIGHT_MAX|| l > PARA_OTHER_MAX)   break;
+				{
+					uint8_t   i = app_pack.payload[0];  //mode
+					uint8_t   j = app_pack.payload[1];  //speed
+					uint8_t   k = app_pack.payload[2];  //bright level
+					uint8_t   l = app_pack.payload[3];  //other
+					if (i > MODE_MAX)    break;
+					if (j > PARA_SPEED_MAX || k > PARA_BRIGHT_MAX|| l > PARA_OTHER_MAX)   break;
 
+					mode_change_flag = true;
+					mode_change_time = 0;
 
-						Display.Init = true;
-						Display.ModeBuf = i;
-						Display.Mode = i;
-						ParaData[i].Speed = j;
-						ParaData[i].Bright = k;
-						ParaData[i].Other = l;
+					Display.Init = true;
+					Display.ModeBuf = i;
+					Display.Mode = i;
+					ParaData[i].Speed = j;
+					ParaData[i].Bright = k;
+					ParaData[i].Other = l;
 
-						ParaData[i].Chksum = 0;
-						ParaData[i].Chksum = chksum_cal((uint8_t *)&ParaData[i], 8 + ParaData[i].ColorNum * 3);
-					}break;
+					ParaData[i].Chksum = 0;
+					ParaData[i].Chksum = chksum_cal((uint8_t *)&ParaData[i], 8 + ParaData[i].ColorNum * 3);
+				}break;
 
 				//set color
 				//the maxium colors number is PARA_COLORNUM_MAX
 				case SET_COLOR_CMD:
+				{
+					uint8_t   i = app_pack.payload[0];  //mode
+					uint8_t   j = app_pack.payload[1];  //colornum
+					if (i > MODE_MAX)        break;    //overflow
+					if (j > PARA_COLORNUM_MAX)                  break;    //overflow
+					if (i != Display.Mode)                      break;    //mismath with the current mode
+
+					mode_change_flag = true;
+					mode_change_time = 0;
+
+					ParaData[i].ColorNum = j;
+					for (uint8_t k = 0; k < j; k++)
 					{
-						uint8_t   i = app_pack.payload[0];  //mode
-						uint8_t   j = app_pack.payload[1];  //colornum
-						if (i > MODE_MAX)        break;    //overflow
-						if (j > PARA_COLORNUM_MAX)                  break;    //overflow
-						if (i != Display.Mode)                      break;    //mismath with the current mode
+						uint8 l = k * 3 + 2;      //RGB->R inedex
+						Color_Caculate(	&ParaData[i].Color[k].BufR,	&ParaData[i].Color[k].BufG,	&ParaData[i].Color[k].BufB,
+										app_pack.payload[l], app_pack.payload[l+1],	app_pack.payload[l+2]);
+					}
 
+					ParaData[i].Chksum = 0;
+					ParaData[i].ColorVal = COLOR_SELF;
+					ParaData[i].Chksum = chksum_cal((const uint8_t *)&ParaData[i], 8 + j * 3);
 
-						ParaData[i].ColorNum = j;
-						for (uint8_t k = 0; k < j; k++)
-						{
-							uint8 l = k * 3 + 2;      //RGB->R inedex
-							Color_Caculate(	&ParaData[i].Color[k].BufR,	&ParaData[i].Color[k].BufG,	&ParaData[i].Color[k].BufB,
-											app_pack.payload[l], app_pack.payload[l+1],	app_pack.payload[l+2]);
-						}
+					Display.Init = true;
 
-						ParaData[i].Chksum = 0;
-						ParaData[i].ColorVal = COLOR_SELF;
-						ParaData[i].Chksum = chksum_cal((const uint8_t *)&ParaData[i], 8 + j * 3);
-
-						Display.Init = true;
-
-						printf("=RGB=(%d, %d, %d)\n", ParaData[i].Color[0].BufR, ParaData[i].Color[0].BufG, ParaData[i].Color[0].BufB);
-					}break;
+					//printf("=RGB=(%d, %d, %d)\n", ParaData[i].Color[0].BufR, ParaData[i].Color[0].BufG, ParaData[i].Color[0].BufB);
+				}break;
 
 				case SET_CNTDWN_HOUR_CMD:
-					{
-						
-					}break;
+				{
+					
+				}break;
 
 				case SET_CNTDWN_TIME_CMD:
+				{
+					uint16_t len = app_pack.len;
+					if (len != 4)	break;		//mismatch
+
+					uint8_t on_hour = app_pack.payload[0];
+					uint8_t on_min = app_pack.payload[1];
+					uint8_t off_hour = app_pack.payload[2];
+					uint8_t off_min = app_pack.payload[3];
+					//wrong time - instead the data by 0xff in order to reply to APP
+					if (on_hour >= 24 || on_min >= 60 || off_hour >= 24 || off_min >= 60)
 					{
-						uint8_t len = app_pack.len;
-						if (len != 4)	break;		//mismatch
-
-						uint8_t on_hour = app_pack.payload[0];
-						uint8_t on_min = app_pack.payload[1];
-						uint8_t off_hour = app_pack.payload[2];
-						uint8_t off_min = app_pack.payload[3];
-						//wrong time - instead the data by 0xff in order to reply to APP
-						if (on_hour >= 24 || on_min >= 60 || off_hour >= 24 || off_min >= 60)
-						{
-							app_pack.payload[0] = 0xff;
-							app_pack.payload[1] = 0xff;
-							app_pack.payload[2] = 0xff;
-							app_pack.payload[3] = 0xff;
-						}
-						//correct time
-						else
-						{
-							cntdwn_data.on_hour = on_hour;
-							cntdwn_data.on_min = on_min;
-							cntdwn_data.off_hour = off_hour;
-							cntdwn_data.off_min = off_min;
-						}
-
-						//reply
-						res_to_app(CNTDWN_STATUS_ACK, (const uint8_t *)&app_pack.payload[0], 4);
-					}break;
-
-				case SET_PASSWORD_CMD:
+						app_pack.payload[0] = 0xff;
+						app_pack.payload[1] = 0xff;
+						app_pack.payload[2] = 0xff;
+						app_pack.payload[3] = 0xff;
+					}
+					//correct time
+					else
 					{
-						uint16_t i = 0;
+						cntdwn_data.on_hour = on_hour;
+						cntdwn_data.on_min = on_min;
+						cntdwn_data.off_hour = off_hour;
+						cntdwn_data.off_min = off_min;
+					}
+
+					//reply
+					res_to_app(CNTDWN_STATUS_ACK, (const uint8_t *)&app_pack.payload[0], 4);
+				}break;
+
+	//--------------------------------------------------------------------------------
+	//                        LAYOUT
+	//--------------------------------------------------------------------------------
+	#if 0
+				case LAYOUT_ENTER_CMD:
+				{
+					uint8_t reply = 0;
+					
+					if (app_pack.len == 1)
+					{
+						if (app_pack.payload[0] == 0 && (Display.Mode == LAYOUT_ENTER || Display.Mode == LAYOUT_TEST))
+						{
+							Display.Mode = LAYOUT_CANCEL;
+							Display.Init = true;
+							reply = 1;
+						}
+
+						else if (Display.Mode != LAYOUT_ENTER)
+						{
+							Display.Mode = LAYOUT_ENTER;
+							Display.Init = true;
+							reply = 1;
+						}
+					}
+
+					res_to_app(LAYOUT_ENTER_ACK, (const uint8_t *)&reply, 1);
+				}break;
+
+				case LAYOUT_TEST_CMD:
+				{
+					uint8_t reply = 0;
+					
+					if (app_pack.len == 5)
+					{
+						#if DATA_PROCESS_DEBUG==1
+							m2m_bytes_dump((u8 *)"=Info=Rcv:", (u8 *)&app_pack, app_pack.len + 8);
+						#endif
 						
-						//check the package length
-						if (app_pack.len == 12)
-						{
-							
-							//check old password
-							if (app_pack.payload[0] == (uint8_t)((pw_chksum >> 8) & 0x00ff) &&
-							app_pack.payload[1] == (uint8_t)(pw_chksum & 0x00ff))
-							{
+						uint16_t	head = ((uint16_t)app_pack.payload[1] << 8) + (uint16_t)app_pack.payload[2];
+						uint16_t	tail = ((uint16_t)app_pack.payload[3] << 8) + (uint16_t)app_pack.payload[4];
+						LayerTest = app_pack.payload[0];
 
-								//check new password checksum
-								uint8_t *p = &app_pack.payload[2];
-								i = ((uint16_t)app_pack.payload[10] >> 8) + (uint16_t)app_pack.payload[11];
-								if (i != CRC16_Cal(p, 8))		i = pw_chksum;
+						#if DATA_PROCESS_DEBUG==1
+							//printf("=Info=Layer: 0x%x",LayerTest);
+							//printf("=Info=Head: 0x%x",head);
+							//printf("=Info=Tail: 0x%x",tail);
+						#endif
+						
+						if (LayerTest < LAYER_MAX && head < LED_TOTAL && tail < LED_TOTAL 
+						&& (Display.Mode == LAYOUT_ENTER || Display.Mode == LAYOUT_TEST))
+						{
+							LayerTemp[LayerTest].Head = head;
+							LayerTemp[LayerTest].Tail = tail;
+							Display.Mode = LAYOUT_TEST;
+							Display.Init = true;
+							reply = 1;
+						}
+					}
+
+					res_to_app(LAYOUT_TEST_ACK, (const uint8_t *)&reply, 1);
+				}break;
+
+				case LAYOUT_SAVE_CMD:
+				{
+					uint8_t reply = 0;
+					
+					if (app_pack.len == 4)
+					{
+						uint16_t	chk = ((uint16_t)app_pack.payload[2] << 8) + (uint16_t)app_pack.payload[3];
+						uint16_t	chkcal = 0;
+						LayerTest = app_pack.payload[0];
+
+						//layout need set as 2D or 3D, the total layer need be less than the maximum value
+						if (LayerTest <= LAYER_MAX && app_pack.payload[1] > 0)
+						{
+							for (uint8_t i = 0; i < LayerTest; i++)
+							{
+								chkcal ^= LayerTemp[i].Head;
+								chkcal ^= LayerTemp[i].Tail;
+							}
+							
+							if (chk == chkcal)
+							{
+								Display.Mode = LAYOUT_SAVE;
+								Display.Init = true;
+								Display.LayoutNum = app_pack.payload[1];
+								reply = 1;
 							}
 						}
+					}
 
-						//respond 
-						res_to_app(PASSWORD_ACK, (const uint8_t *)&i, 2);
-						
-						//reload the value to pw_chksum
-						pw_chksum = i;
-						
-					}break;
+					//exit the layout mode if error occur
+					if (reply == 0)
+					{
+						Display.Mode = LAYOUT_CANCEL;
+						Display.Init = true;
+					}
+
+					//save the layer information to user flash
+					else
+					{
+						#if USER_DATA_EN==1
+						sys_eeprom_write(LAYOUT_OFFSET, (uint8_t *)&Display.LayoutNum, LAYOUT_LEN);
+						uint8_t len = LayerTest * 4;
+						sys_eeprom_write(LAYER_NUM_OFFSET, (uint8_t *)&len, LAYER_NUM_LEN);
+						sys_eeprom_write(LAYER_OFFSET, (uint8_t *)&LayerTemp, len);
+						#endif
+					}
+
+					res_to_app(LAYOUT_SAVE_ACK, (const uint8_t *)&reply, 1);
+				}break;
+
+				case LAYOUT_SEC_CTRL:
+				{
+					uint8_t		reply = 0;
+					uint16_t	cnt = app_pack.len / 7;
+					Display.Mode = LAYOUT_PHOTO_CTRL;
+
+					while(cnt)
+					{
+						cnt--;
+						uint8_t 	i = cnt * 7;
+						uint16_t 	add_start = ((uint16_t)app_pack.payload[i] << 8) + (uint16_t)app_pack.payload[i+1];
+						uint16_t 	add_end	= ((uint16_t)app_pack.payload[i+2] << 8) + (uint16_t)app_pack.payload[i+3];
+						if ((add_start <= add_end) && (add_end < LED_TOTAL))
+						{
+							reply = 1;
+							uint16_t j = 0;
+							for (j = add_start; j <= add_end; j++)
+							{
+								LedData[j].DutyR = app_pack.payload[i+4];
+								if (LedData[j].DutyR > 0xf0)	LedData[j].DutyR = 0xf0;
+								LedData[j].DutyG = app_pack.payload[i+5];
+								if (LedData[j].DutyG > 0xf0)	LedData[j].DutyG = 0xf0;
+								LedData[j].DutyB = app_pack.payload[i+6];
+								if (LedData[j].DutyB > 0xf0)	LedData[j].DutyB = 0xf0;
+							}
+						}
+						else
+						{
+							break;
+						}
+					}
+
+					res_to_app(LAYOUT_SEC_CTRL_ACK, (const uint8_t *)&reply, 1);
+				}break;
+
+				case LAYOUT_MOD_CTRL:
+				{
+					uint8_t reply = 0;
+					uint8_t mod = app_pack.payload[0];
+					if (mod == 0)
+					{
+						res_to_app(LAYOUT_MOD_CTRL_ACK, (const uint8_t *)&reply, 1);
+						break;
+					}
+					reply = 1;
+
+					Display.Mode = LAYOUT_PHOTO_CTRL;
+
+					uint16_t i = 0;
+					uint8_t j = 0;
+					uint8_t k = 0;
+					for (i = 0; i < LED_TOTAL; i++)
+					{
+						j = mod;
+						while (j)
+						{
+							j--;
+							if ((i % mod) == j)
+							{
+								k = j * 3 + 1;
+								LedData[i].DutyR = app_pack.payload[k];
+								if (LedData[i].DutyR > 0xf0)	LedData[i].DutyR = 0xf0;
+								LedData[i].DutyG = app_pack.payload[k+1];
+								if (LedData[i].DutyG > 0xf0)	LedData[i].DutyG = 0xf0;
+								LedData[i].DutyB = app_pack.payload[k+2];
+								if (LedData[i].DutyB > 0xf0)	LedData[i].DutyB = 0xf0;
+								break;
+							}
+						}
+					}
+
+					res_to_app(LAYOUT_MOD_CTRL_ACK, (const uint8_t *)&reply, 1);
+				}break;
+
+				case LAYOUT_DOT_CTRL:
+				{
+					uint8_t		reply = 0;
+					uint16_t	cnt = app_pack.len / 5;
+					Display.Mode = LAYOUT_PHOTO_CTRL;
+
+					while(cnt)
+					{
+						cnt--;
+						uint16_t 	i = cnt * 5;
+						uint16_t 	add_dot = ((uint16_t)app_pack.payload[i] << 8) + (uint16_t)app_pack.payload[i+1];
+						if (add_dot < LED_TOTAL)
+						{
+							reply = 1;
+							LedData[add_dot].DutyR = app_pack.payload[i+2];
+							if (LedData[add_dot].DutyR > 0xf0)	LedData[add_dot].DutyR = 0xf0;
+							LedData[add_dot].DutyG = app_pack.payload[i+3];
+							if (LedData[add_dot].DutyG > 0xf0)	LedData[add_dot].DutyG = 0xf0;
+							LedData[add_dot].DutyB = app_pack.payload[i+4];
+							if (LedData[add_dot].DutyB > 0xf0)	LedData[add_dot].DutyB = 0xf0;
+						}
+						else
+						{
+							break;
+						}
+					}
+
+					res_to_app(LAYOUT_DOT_CTRL_ACK, (const uint8_t *)&reply, 1);
+				}break;
+
+				case LAYOUT_DOT_NOADD_CTRL:
+				{
+					uint8_t		reply = 1;
+					uint16_t num = app_pack.len / 3;
+					uint16_t cnt = 0;
+					uint16_t color = 0;
+
+					Display.Mode = LAYOUT_PHOTO_CTRL;
+
+					while((cnt < num) && (cnt < LED_TOTAL))
+					{
+						color = cnt * 3;
+						LedData[cnt].DutyR = app_pack.payload[color];
+						if (LedData[cnt].DutyR > 0xf0)	LedData[cnt].DutyR = 0xf0;
+						LedData[cnt].DutyG = app_pack.payload[color+1];
+						if (LedData[cnt].DutyG > 0xf0)	LedData[cnt].DutyG = 0xf0;
+						LedData[cnt].DutyB = app_pack.payload[color+2];
+						if (LedData[cnt].DutyB > 0xf0)	LedData[cnt].DutyB = 0xf0;
+						cnt++;
+					}
+
+					res_to_app(LAYOUT_DOT_NOADD_CTRL_ACK, (const uint8_t *)&reply, 1);
+				}break;
+
+				case LAYOUT_DOT_NOADD_CTRL_2:
+				{
+					uint8_t		reply = 1;
+					uint16_t num = app_pack.len / 3;
+					uint16_t cnt = 0;
+					uint16_t color = 0;
+
+					Display.Mode = LAYOUT_PHOTO_CTRL;
+
+					while((cnt < num) && ((cnt+200) < LED_TOTAL))
+					{
+						color = cnt * 3;
+						LedData[cnt+200].DutyR = app_pack.payload[color];
+						if (LedData[cnt+200].DutyR > 0xf0)	LedData[cnt+200].DutyR = 0xf0;
+						LedData[cnt+200].DutyG = app_pack.payload[color+1];
+						if (LedData[cnt+200].DutyG > 0xf0)	LedData[cnt+200].DutyG = 0xf0;
+						LedData[cnt+200].DutyB = app_pack.payload[color+2];
+						if (LedData[cnt+200].DutyB > 0xf0)	LedData[cnt+200].DutyB = 0xf0;
+						cnt++;
+					}
+
+					res_to_app(LAYOUT_DOT_NOADD_CTRL_2_ACK, (const uint8_t *)&reply, 1);
+				}break;
+				
+					
+	#endif
+	//--------------------------------------------------------------------------------
+	//                        VOICE CONTROL
+	//--------------------------------------------------------------------------------
 
 				case VOICE_SET_ON_OFF_CMD:
 					{
@@ -1018,6 +1306,8 @@ void App_data_prcoess(void)
 							Display.ModeBuf = i;
 							Display.Init = true;
 
+							mode_change_flag = true;
+							mode_change_time = 0;
 						}
 					}break;
 
@@ -1026,6 +1316,9 @@ void App_data_prcoess(void)
 						if (app_pack.len != 1)	break;
 						uint8_t i = app_pack.payload[0];	//get the color value
 						if (i > COLOR_VAL_MAX)		break;
+
+						mode_change_flag = true;
+						mode_change_time = 0;
 
 						//save the color values to ParaData
 						uint8_t j = Display.Mode;
@@ -1053,6 +1346,8 @@ void App_data_prcoess(void)
 						uint8_t i = app_pack.payload[0];	//get the theme value
 						if (i > THEME_VAL_MAX)		break;
 
+						mode_change_flag = true;
+						mode_change_time = 0;
 
 						//save the color values to ParaData
 						i = i + COLOR_VAL_MAX + 1;		//0x0f + 1
@@ -1137,7 +1432,7 @@ void App_data_prcoess(void)
 	*		> *pdata - data adress
 	*		> len - data length
 	*/
-void res_to_app(uint8_t cmd,const uint8_t *pdata, uint8_t len)
+void res_to_app(uint8_t cmd,const uint8_t *pdata, uint16_t len)
 {
 	static uint8_t    index_snd_pre;
 
@@ -1145,7 +1440,7 @@ void res_to_app(uint8_t cmd,const uint8_t *pdata, uint8_t len)
 	else                      index_snd_pre++;
 	app_ack_pack.type = PRODUCT_TYPE;
 	app_ack_pack.ver = APP_PROTOCOL_VER;
-	app_ack_pack.password = pw_chksum;		//old password checksum
+	app_ack_pack.reserve = 0;		//old password checksum
 	app_ack_pack.index = index_snd_pre;
 	app_ack_pack.chksum = 0;
 	app_ack_pack.cmd = cmd;
@@ -1221,10 +1516,10 @@ void Color_Caculate(uint8_t *rtR, uint8_t *rtG, uint8_t *rtB,
   * FunctionName  CRC16_Cal
   * Brief         caculate the CRC16_CCITT value of buffer
   */
-uint16_t	CRC16_Cal(uint8_t* Buffer, uint8_t len)
+uint16_t	CRC16_Cal(uint8_t* Buffer, uint16_t len)
 {
 	uint16_t	ResultBuf = 0x0000;
-	uint8_t		CntBuf = 0;
+	uint16_t	CntBuf = 0;
 	uint8_t		BitBuf = 0;
 
 	for (CntBuf = 0; CntBuf < len; CntBuf++)
@@ -1250,7 +1545,7 @@ uint16_t	CRC16_Cal(uint8_t* Buffer, uint8_t len)
   *       > *buffer  - data head adress
   *       > len      - data length
   */
-uint8_t   chksum_cal(const uint8_t *src, uint8_t len)
+uint8_t   chksum_cal(const uint8_t *src, uint16_t len)
 {
   uint8_t   chksum = 0;
   uint8_t	*buffer = (uint8_t *)src;
