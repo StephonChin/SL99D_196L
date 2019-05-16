@@ -15,8 +15,8 @@
 
 #include "osapi.h"
 #include "../key/key.h"
-#include "../../m2mnet/include/m2m_log.h"
-#include "../../m2mnet/include/m2m.h"
+#include "../../include/m2m_log.h"
+#include "../../include/m2m.h"
 #include "../display/Display.h"
 #include "../com/mcu_com.h"
 #include "countdown.h"

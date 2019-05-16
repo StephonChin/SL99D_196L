@@ -13,11 +13,11 @@
 #define CONNECT_FAILED  0x02
 //#define CONNECT_WAITCONNECT    0x03
 #define CONNECT_SUCCESS 0x04
-//#define TURNON_BROADCAST
+//#define TURNOFF_BROADCAST
 
 /********* server configure ***/
 /** 设备端 配置 ***********************************************************/
-#define MAX_SMARTCONFIG_TIME	(3*60)
+#define MAX_SMARTCONFIG_TIME	(3*60*1000)
 #define TST_DEV_LOCAL_ID    (8)
 #define TST_DEV_LOCAL_PORT  PRODUCT_LOCAL_PORT//(9529)
 #define TST_DEV_LOCAL_KEY   PRODUCT_KEY//"123"

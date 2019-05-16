@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "../../m2mnet/include/m2m.h"
+#include "../../include/m2m.h"
 #include "../process/data_process.h"
 #include "app_com.h"
 
