@@ -114,8 +114,8 @@ int m2m_loop(void){
 	// 创建 net ，连接到远端服务器。
     // M2M_Return_T m2m_int(M2M_conf_T *p_conf);
 	m2m_trysync( m2m.net );
+	delay(1);
 
-	
         
 	#if 0	
 		if(obs.p_node ){
@@ -155,7 +155,7 @@ void dev_callback(int code, M2M_packet_T **pp_ack_data,void *p_r,void *p_arg){
 
                  //m2m_bytes_dump("local ip dump : ", (u8*)getlocal_ip(),  strlen(getlocal_ip()) );
                  m2m_log_debug("server receive code = %d\n", code );
-                 if( p_recv_data->len > 0 && p_recv_data->p_data ){
+                 if( p_recv_data && p_recv_data->len > 0 && p_recv_data->p_data ){
                       m2m_log("server receive data : %s\n",p_recv_data->p_data);
                 }
                 *pp_ack_data = p_ack;

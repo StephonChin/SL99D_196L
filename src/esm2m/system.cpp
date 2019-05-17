@@ -447,9 +447,9 @@ void sys_sta_smartconf_end(void){
 			if(g_wifi_configing){
 				delay(200);		
 			}
-			if( g_sys_cnn == SYS_CONFIGING_STA && WiFi.smartConfigDone()){
-				g_sys_cnn = SYS_LOST_CONNECT;
-			}
+			// if( g_sys_cnn == SYS_CONFIGING_STA && WiFi.smartConfigDone()){
+			// 	g_sys_cnn = SYS_LOST_CONNECT;
+			// }
 		}
 	}	
 }
