@@ -13,13 +13,13 @@ void Display_Tree_Steady(void)
 {
 	uint16_t temp = 0;
 	
-	if(Display.Init == TRUE)
+	if(display_data.init == TRUE)
 	{	
-		Display.Init = FALSE;
+		display_data.init = FALSE;
 
-		Para_Err_Check(&ParaData[STEADY]);
+		Para_Err_Check(&mode_para_data[STEADY]);
 
-		BrightLevel = PARA_BRIGHT_MAX - ParaData[STEADY].Bright + 1;
+		BrightLevel = PARA_BRIGHT_MAX - mode_para_data[STEADY].Bright + 1;
 
 		SpeedCtrl = 0;
 		OtherCtrl = 0;
@@ -27,10 +27,10 @@ void Display_Tree_Steady(void)
 
 		for (temp = 0; temp < LED_TOTAL; temp++)
 		{
-			TempColor = temp % ParaData[STEADY].ColorNum;
-			LedData[temp].DutyR = ParaData[STEADY].Color[TempColor].BufR;
-			LedData[temp].DutyG = ParaData[STEADY].Color[TempColor].BufG;
-			LedData[temp].DutyB = ParaData[STEADY].Color[TempColor].BufB;
+			TempColor = temp % mode_para_data[STEADY].ColorNum;
+			LedData[temp].DutyR = mode_para_data[STEADY].Color[TempColor].BufR;
+			LedData[temp].DutyG = mode_para_data[STEADY].Color[TempColor].BufG;
+			LedData[temp].DutyB = mode_para_data[STEADY].Color[TempColor].BufB;
 		}
 	}
 }
@@ -45,11 +45,11 @@ void Display_Tree_Rainbow(void)
 	uint16_t	i = 0;
 	uint16_t	j = 0;
 
-	if(Display.Init == true)
+	if(display_data.init == true)
 	{	
-		Display.Init = false;
+		display_data.init = false;
 
-		Para_Err_Check(&ParaData[RAINBOW]);
+		Para_Err_Check(&mode_para_data[RAINBOW]);
 
 		//BrightLevel = PARA_BRIGHT_MAX - ParaData[RAINBOW].Bright + 1;
 		BrightLevel=1;
@@ -66,7 +66,7 @@ void Display_Tree_Rainbow(void)
 		TopG = 240;
 		TopB = 240;
 
-		switch (ParaData[RAINBOW].Other)
+		switch (mode_para_data[RAINBOW].Other)
 		{
 			default:    FadeR = 80;      break;
 			case 9:		FadeR = 80;		 break;
@@ -93,7 +93,7 @@ void Display_Tree_Rainbow(void)
   
   
   SpeedCtrl++;
-  if (SpeedCtrl > ((PARA_SPEED_MAX - ParaData[RAINBOW].Speed) * (uint8_t)(1 - ModeFirstFlag)))
+  if (SpeedCtrl > ((PARA_SPEED_MAX - mode_para_data[RAINBOW].Speed) * (uint8_t)(1 - ModeFirstFlag)))
   {
     SpeedCtrl = 0;
 
@@ -171,13 +171,11 @@ void Display_Tree_Rainbow(void)
 
 void Display_Tree_Fade(void)
 {
-	uint16_t	i = 0;
-
-	if (Display.Init == TRUE)
+	if (display_data.init == TRUE)
 	{
-		Display.Init = FALSE;
+		display_data.init = FALSE;
 
-		Para_Err_Check(&ParaData[FADE]);
+		Para_Err_Check(&mode_para_data[FADE]);
 
 		//BrightLevel = PARA_BRIGHT_MAX - ParaData[FADE].Bright + 1;
 		BrightLevel=1;
@@ -186,12 +184,12 @@ void Display_Tree_Fade(void)
 		TempStep = 0;
 		SpeedCtrl = 0;
 		HoldTime = 0;
-		TempR = ParaData[FADE].Color[TempColor].BufR;
-		TempG = ParaData[FADE].Color[TempColor].BufG;
-		TempB = ParaData[FADE].Color[TempColor].BufB;
+		TempR = mode_para_data[FADE].Color[TempColor].BufR;
+		TempG = mode_para_data[FADE].Color[TempColor].BufG;
+		TempB = mode_para_data[FADE].Color[TempColor].BufB;
 		Display_All_Set(TempR, TempG, TempB);
 
-		if (ParaData[FADE].ColorNum == 1)
+		if (mode_para_data[FADE].ColorNum == 1)
 		{
 			TopR = 0;
 			TopG = 0;
@@ -200,9 +198,9 @@ void Display_Tree_Fade(void)
 		else 
 		{
 			TempColor = 1;
-			TopR = ParaData[FADE].Color[TempColor].BufR;
-			TopG = ParaData[FADE].Color[TempColor].BufG;
-			TopB = ParaData[FADE].Color[TempColor].BufB;
+			TopR = mode_para_data[FADE].Color[TempColor].BufR;
+			TopG = mode_para_data[FADE].Color[TempColor].BufG;
+			TopB = mode_para_data[FADE].Color[TempColor].BufB;
 		}
 
 		//Get the fade level
@@ -221,7 +219,7 @@ void Display_Tree_Fade(void)
 
 
 	SpeedCtrl++;
-	if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[FADE].Speed))
+	if (SpeedCtrl > (PARA_SPEED_MAX - mode_para_data[FADE].Speed))
 	{
 		SpeedCtrl = 0;
 		switch (TempStep)
@@ -247,7 +245,7 @@ void Display_Tree_Fade(void)
 			//hold
 			case 1:
 			{
-				if (ParaData[FADE].ColorNum == 1)
+				if (mode_para_data[FADE].ColorNum == 1)
 				{
 					TempStep++;
 				}
@@ -264,19 +262,19 @@ void Display_Tree_Fade(void)
 
 			default:
 			{
-				if (ParaData[FADE].ColorNum == 1)
+				if (mode_para_data[FADE].ColorNum == 1)
 				{
-					TopR = ParaData[FADE].Color[0].BufR - TempR;
-					TopG = ParaData[FADE].Color[0].BufG - TempG;
-					TopB = ParaData[FADE].Color[0].BufB - TempB;
+					TopR = mode_para_data[FADE].Color[0].BufR - TempR;
+					TopG = mode_para_data[FADE].Color[0].BufG - TempG;
+					TopB = mode_para_data[FADE].Color[0].BufB - TempB;
 				}
 				else
 				{
 					TempColor++;
-					if (TempColor >= ParaData[FADE].ColorNum)   TempColor = 0;
-					TopR = ParaData[FADE].Color[TempColor].BufR;
-					TopG = ParaData[FADE].Color[TempColor].BufG;
-					TopB = ParaData[FADE].Color[TempColor].BufB;
+					if (TempColor >= mode_para_data[FADE].ColorNum)   TempColor = 0;
+					TopR = mode_para_data[FADE].Color[TempColor].BufR;
+					TopG = mode_para_data[FADE].Color[TempColor].BufG;
+					TopB = mode_para_data[FADE].Color[TempColor].BufB;
 				}
 
 				//Get the fade value again
@@ -306,11 +304,11 @@ void Display_Tree_Fade(void)
 #define SPARKLE_GRP_CNT			3
 	void Display_Tree_Sparkle(void)
 	{
-		if (Display.Init == true)
+		if (display_data.init == true)
 		{
-			Display.Init = false;
+			display_data.init = false;
 	
-			Para_Err_Check(&ParaData[SPARKLE]);
+			Para_Err_Check(&mode_para_data[SPARKLE]);
 	
 			BrightLevel = 1;
 	
@@ -320,17 +318,17 @@ void Display_Tree_Fade(void)
 			
 			for (uint16_t i = 0; i < LED_TOTAL; i++)
 			{
-				TempColor = i % ParaData[SPARKLE].ColorNum;
-				LedData[i].DutyR = ParaData[SPARKLE].Color[TempColor].BufR / SPARKLE_DARK_VAL;
-				LedData[i].DutyG = ParaData[SPARKLE].Color[TempColor].BufG / SPARKLE_DARK_VAL;
-				LedData[i].DutyB = ParaData[SPARKLE].Color[TempColor].BufB / SPARKLE_DARK_VAL;
+				TempColor = i % mode_para_data[SPARKLE].ColorNum;
+				LedData[i].DutyR = mode_para_data[SPARKLE].Color[TempColor].BufR / SPARKLE_DARK_VAL;
+				LedData[i].DutyG = mode_para_data[SPARKLE].Color[TempColor].BufG / SPARKLE_DARK_VAL;
+				LedData[i].DutyB = mode_para_data[SPARKLE].Color[TempColor].BufB / SPARKLE_DARK_VAL;
 	
 				ModeTime[i] = 0;
 				LedPick[i] = 0xffff;
 			}
 	
 			//get the group count
-			switch(ParaData[SPARKLE].Other)
+			switch(mode_para_data[SPARKLE].Other)
 			{
 				case 0: 	RptTotal = 7;		break;
 				case 1: 	RptTotal = 8;		break;
@@ -426,7 +424,7 @@ void Display_Tree_Fade(void)
 		
 	#if 0
 		SpeedCtrl++;
-		if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[SPARKLE].Speed))
+		if (SpeedCtrl > (PARA_SPEED_MAX - mode_para_data[SPARKLE].Speed))
 		{
 			SpeedCtrl = 0;
 	
@@ -443,7 +441,7 @@ void Display_Tree_Fade(void)
 	
 			uint16_t  j = 0;
 			uint16_t timeout = LED_TOTAL;
-			for (i = 0; i < (ParaData[SPARKLE].Other + 1) * 4; i++)
+			for (i = 0; i < (mode_para_data[SPARKLE].Other + 1) * 4; i++)
 			{
 				timeout = LED_TOTAL * 5;
 				do
@@ -473,10 +471,10 @@ void Display_Tree_Fade(void)
   */
 void Display_Tree_Snow(void)
 {
-	if(Display.Init == true){	
-	    Display.Init = false;
+	if(display_data.init == true){	
+	    display_data.init = false;
 
-	    Para_Err_Check(&ParaData[SNOW]);
+	    Para_Err_Check(&mode_para_data[SNOW]);
 	    
 	    //BrightLevel = PARA_BRIGHT_MAX - ParaData[SNOW].Bright + 1;
 		BrightLevel=1;
@@ -487,9 +485,9 @@ void Display_Tree_Snow(void)
 	    TempStep  = 0;
 	    LayerStep = 0;
 	    
-		TempR = ParaData[SNOW].Color[TempColor].BufR;
-	    TempG = ParaData[SNOW].Color[TempColor].BufG;
-	    TempB = ParaData[SNOW].Color[TempColor].BufB;
+		TempR = mode_para_data[SNOW].Color[TempColor].BufR;
+	    TempG = mode_para_data[SNOW].Color[TempColor].BufG;
+	    TempB = mode_para_data[SNOW].Color[TempColor].BufB;
 	    
 	    TopR = TempR;
 	    TopG = TempG;
@@ -506,7 +504,7 @@ void Display_Tree_Snow(void)
   
   
 	SpeedCtrl++;
-	if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[SNOW].Speed + 2))
+	if (SpeedCtrl > (PARA_SPEED_MAX - mode_para_data[SNOW].Speed + 2))
 	{
 		SpeedCtrl = 0;
 
@@ -559,14 +557,14 @@ void Display_Tree_Snow(void)
 				TempStep = 0;
 				LayerStep = 0;
 				TempColor++;
-				if (TempColor >= ParaData[SNOW].ColorNum)
+				if (TempColor >= mode_para_data[SNOW].ColorNum)
 				{
 					TempColor = 0;
 				}
 
-				TopR = ParaData[SNOW].Color[TempColor].BufR;
-				TopG = ParaData[SNOW].Color[TempColor].BufG;
-				TopB = ParaData[SNOW].Color[TempColor].BufB;
+				TopR = mode_para_data[SNOW].Color[TempColor].BufR;
+				TopG = mode_para_data[SNOW].Color[TempColor].BufG;
+				TopB = mode_para_data[SNOW].Color[TempColor].BufB;
 				FadeR = TopR / FADE_LEVEL;
 				FadeG = TopG / FADE_LEVEL;
 				FadeB = TopB / FADE_LEVEL;
@@ -604,11 +602,11 @@ void Display_Tree_Twinkle(void)
 	uint16_t	l = 0;
 	uint16_t	m = 0;
 
-	if (Display.Init == true)
+	if (display_data.init == true)
 	{
-		Display.Init = false;
+		display_data.init = false;
 
-		Para_Err_Check(&ParaData[TWINKLE]);
+		Para_Err_Check(&mode_para_data[TWINKLE]);
 
 		BrightLevel = 1;
 
@@ -618,10 +616,10 @@ void Display_Tree_Twinkle(void)
 
 		for (i = 0; i < LED_TOTAL; i++)
 		{
-			TempColor = i % ParaData[TWINKLE].ColorNum;
-			FadeR = ParaData[TWINKLE].Color[TempColor].BufR / FADE_LEVEL;
-			FadeG = ParaData[TWINKLE].Color[TempColor].BufG / FADE_LEVEL;
-			FadeB = ParaData[TWINKLE].Color[TempColor].BufB / FADE_LEVEL;
+			TempColor = i % mode_para_data[TWINKLE].ColorNum;
+			FadeR = mode_para_data[TWINKLE].Color[TempColor].BufR / FADE_LEVEL;
+			FadeG = mode_para_data[TWINKLE].Color[TempColor].BufG / FADE_LEVEL;
+			FadeB = mode_para_data[TWINKLE].Color[TempColor].BufB / FADE_LEVEL;
 			RAND();
 			j = (uint8_t)rand() % FADE_LEVEL;
 			LedData[i].DutyR = FadeR * j;
@@ -651,10 +649,10 @@ void Display_Tree_Twinkle(void)
 	{
 		for (i = 0; i < LED_TOTAL; i++)
 		{
-			TempColor = i % ParaData[TWINKLE].ColorNum;
-			FadeR = ParaData[TWINKLE].Color[TempColor].BufR / FADE_LEVEL;
-			FadeG = ParaData[TWINKLE].Color[TempColor].BufG / FADE_LEVEL;
-			FadeB = ParaData[TWINKLE].Color[TempColor].BufB / FADE_LEVEL;
+			TempColor = i % mode_para_data[TWINKLE].ColorNum;
+			FadeR = mode_para_data[TWINKLE].Color[TempColor].BufR / FADE_LEVEL;
+			FadeG = mode_para_data[TWINKLE].Color[TempColor].BufG / FADE_LEVEL;
+			FadeB = mode_para_data[TWINKLE].Color[TempColor].BufB / FADE_LEVEL;
 
 			//Fade in and fade out
 			if (LedPick[i] == 0)
@@ -736,7 +734,7 @@ void Display_Tree_Twinkle(void)
 		SpeedCtrl = 0;
 
 		uint16_t	timeout = LED_TOTAL;
-		for (i = 0; i < (ParaData[TWINKLE].Other + 1); i++)
+		for (i = 0; i < (mode_para_data[TWINKLE].Other + 1); i++)
 		{
 			timeout = LED_TOTAL * 5;
 			do
@@ -751,10 +749,10 @@ void Display_Tree_Twinkle(void)
 				LedPick[j] = 1;
 				ModeStep[j] = 0;
 				ModeTime[j] = 0;
-				TempColor = j % ParaData[TWINKLE].ColorNum;
-				LedData[j].DutyR = ParaData[TWINKLE].Color[TempColor].BufR;
-				LedData[j].DutyG = ParaData[TWINKLE].Color[TempColor].BufG;
-				LedData[j].DutyB = ParaData[TWINKLE].Color[TempColor].BufB;
+				TempColor = j % mode_para_data[TWINKLE].ColorNum;
+				LedData[j].DutyR = mode_para_data[TWINKLE].Color[TempColor].BufR;
+				LedData[j].DutyG = mode_para_data[TWINKLE].Color[TempColor].BufG;
+				LedData[j].DutyB = mode_para_data[TWINKLE].Color[TempColor].BufB;
 			}
 		}
 	}
@@ -765,9 +763,9 @@ void Display_Tree_Fireworks(void)
 {
   uint16_t i = 0, j = 0;
   
-  if (Display.Init == true){
-    Display.Init = false;
-    Para_Err_Check(&ParaData[FIREWORKS]);
+  if (display_data.init == true){
+    display_data.init = false;
+    Para_Err_Check(&mode_para_data[FIREWORKS]);
   
     //BrightLevel = PARA_BRIGHT_MAX - ParaData[FIREWORKS].Bright + 1;
     BrightLevel=1;
@@ -787,20 +785,20 @@ void Display_Tree_Fireworks(void)
     //turn on from bottom to top layer
     case 0:{
       SpeedCtrl++;
-      if (SpeedCtrl > PARA_SPEED_MAX - ParaData[FIREWORKS].Speed){
+      if (SpeedCtrl > PARA_SPEED_MAX - mode_para_data[FIREWORKS].Speed){
         SpeedCtrl = 0;
         for (i = Layer[LayerStep].Head; i <= Layer[LayerStep].Tail; i++){
-          LedData[i].DutyR = ParaData[FIREWORKS].Color[TempColor].BufR;
-          LedData[i].DutyG = ParaData[FIREWORKS].Color[TempColor].BufG;
-          LedData[i].DutyB = ParaData[FIREWORKS].Color[TempColor].BufB;
+          LedData[i].DutyR = mode_para_data[FIREWORKS].Color[TempColor].BufR;
+          LedData[i].DutyG = mode_para_data[FIREWORKS].Color[TempColor].BufG;
+          LedData[i].DutyB = mode_para_data[FIREWORKS].Color[TempColor].BufB;
         }
 
         LayerStep++;
         if (LayerStep >= LayerMax){
           TempStep++;
-          FadeR = ParaData[FIREWORKS].Color[TempColor].BufR / FADE_LEVEL;
-          FadeG = ParaData[FIREWORKS].Color[TempColor].BufG / FADE_LEVEL;
-          FadeB = ParaData[FIREWORKS].Color[TempColor].BufB / FADE_LEVEL;
+          FadeR = mode_para_data[FIREWORKS].Color[TempColor].BufR / FADE_LEVEL;
+          FadeG = mode_para_data[FIREWORKS].Color[TempColor].BufG / FADE_LEVEL;
+          FadeB = mode_para_data[FIREWORKS].Color[TempColor].BufB / FADE_LEVEL;
           FadeLevel = FADE_LEVEL;
         }
       }
@@ -824,10 +822,10 @@ void Display_Tree_Fireworks(void)
 	{
       for (i = 0; i < LED_TOTAL; i++)
 	  {
-        j = i % ParaData[FIREWORKS].ColorNum;
-        LedData[i].DutyR = ParaData[FIREWORKS].Color[j].BufR;
-        LedData[i].DutyG = ParaData[FIREWORKS].Color[j].BufG;
-        LedData[i].DutyB = ParaData[FIREWORKS].Color[j].BufB;
+        j = i % mode_para_data[FIREWORKS].ColorNum;
+        LedData[i].DutyR = mode_para_data[FIREWORKS].Color[j].BufR;
+        LedData[i].DutyG = mode_para_data[FIREWORKS].Color[j].BufG;
+        LedData[i].DutyB = mode_para_data[FIREWORKS].Color[j].BufB;
         LedPick[i] = 1;
         ModeTime[i] = 0;
       }
@@ -862,10 +860,10 @@ void Display_Tree_Fireworks(void)
 		{
           ModeTime[i] = 0;
 
-          j = i % ParaData[FIREWORKS].ColorNum;
-          TempR = ParaData[FIREWORKS].Color[j].BufR;
-          TempG = ParaData[FIREWORKS].Color[j].BufG;
-          TempB = ParaData[FIREWORKS].Color[j].BufB;
+          j = i % mode_para_data[FIREWORKS].ColorNum;
+          TempR = mode_para_data[FIREWORKS].Color[j].BufR;
+          TempG = mode_para_data[FIREWORKS].Color[j].BufG;
+          TempB = mode_para_data[FIREWORKS].Color[j].BufB;
           FadeR = TempR / FADE_LEVEL;
           FadeG = TempG / FADE_LEVEL;
           FadeB = TempB / FADE_LEVEL;
@@ -886,7 +884,7 @@ void Display_Tree_Fireworks(void)
     //change color and repeat
     default:{
       TempColor++;
-      if (TempColor >= ParaData[FIREWORKS].ColorNum)    TempColor = 0;
+      if (TempColor >= mode_para_data[FIREWORKS].ColorNum)    TempColor = 0;
       TempStep = 0;
       LayerStep = 0;
     }break;
@@ -902,9 +900,9 @@ void Display_Tree_Rolling(void)
   uint16_t i = 0;
   uint16_t j = 0;
   
-	if(Display.Init == true){	
-    Display.Init = false;
-    Para_Err_Check(&ParaData[ROLLING]);
+	if(display_data.init == true){	
+    display_data.init = false;
+    Para_Err_Check(&mode_para_data[ROLLING]);
     //BrightLevel = PARA_BRIGHT_MAX - ParaData[ROLLING].Bright + 1;
     BrightLevel=1;
     
@@ -914,11 +912,11 @@ void Display_Tree_Rolling(void)
     TempStep  = 0;
     RptCtrl   = 0;
     
-	TempR = ParaData[ROLLING].Color[TempColor].BufR;
-    TempG = ParaData[ROLLING].Color[TempColor].BufG;
-    TempB = ParaData[ROLLING].Color[TempColor].BufB;
+	TempR = mode_para_data[ROLLING].Color[TempColor].BufR;
+    TempG = mode_para_data[ROLLING].Color[TempColor].BufG;
+    TempB = mode_para_data[ROLLING].Color[TempColor].BufB;
 
-    RptTotal = PARA_OTHER_MAX - ParaData[ROLLING].Other + 3; 
+    RptTotal = PARA_OTHER_MAX - mode_para_data[ROLLING].Other + 3; 
     
     Display_All_Set(0,0,0);
 
@@ -929,7 +927,7 @@ void Display_Tree_Rolling(void)
   
   
   SpeedCtrl++;
-  if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[ROLLING].Speed) * (uint8_t)(1 - ModeFirstFlag))
+  if (SpeedCtrl > (PARA_SPEED_MAX - mode_para_data[ROLLING].Speed) * (uint8_t)(1 - ModeFirstFlag))
   {
     SpeedCtrl = 0;
 
@@ -956,32 +954,32 @@ void Display_Tree_Rolling(void)
 	      
 	      //Check the count of color, if the mode has only one color, fill it with dark
 	      case 1:{
-	        if (ParaData[ROLLING].ColorNum == 1)   TempStep = 2;
+	        if (mode_para_data[ROLLING].ColorNum == 1)   TempStep = 2;
 	        else                                      TempStep = 3;
 	      } break;
 	      
 	      //dark
 	      case 2:{
-	        TempR = ParaData[ROLLING].Color[0].BufR / 4;
-          	TempG = ParaData[ROLLING].Color[0].BufG / 4;
-          	TempB = ParaData[ROLLING].Color[0].BufB / 4;
+	        TempR = mode_para_data[ROLLING].Color[0].BufR / 4;
+          	TempG = mode_para_data[ROLLING].Color[0].BufG / 4;
+          	TempB = mode_para_data[ROLLING].Color[0].BufB / 4;
 	        RptCtrl++;
 	        if (RptCtrl > RptTotal){
 	          RptCtrl = 0;
 	          TempStep = 0;
-	          TempR = ParaData[ROLLING].Color[0].BufR;
-	          TempG = ParaData[ROLLING].Color[0].BufG;
-	          TempB = ParaData[ROLLING].Color[0].BufB;
+	          TempR = mode_para_data[ROLLING].Color[0].BufR;
+	          TempG = mode_para_data[ROLLING].Color[0].BufG;
+	          TempB = mode_para_data[ROLLING].Color[0].BufB;
 	        }
 	      } break;
 	      
 	      //change color
 	      case 3:{
 	        TempColor++;
-	        if (TempColor >= ParaData[ROLLING].ColorNum)   TempColor = 0;
-	        TempR = ParaData[ROLLING].Color[TempColor].BufR;
-	        TempG = ParaData[ROLLING].Color[TempColor].BufG;
-	        TempB = ParaData[ROLLING].Color[TempColor].BufB;
+	        if (TempColor >= mode_para_data[ROLLING].ColorNum)   TempColor = 0;
+	        TempR = mode_para_data[ROLLING].Color[TempColor].BufR;
+	        TempG = mode_para_data[ROLLING].Color[TempColor].BufG;
+	        TempB = mode_para_data[ROLLING].Color[TempColor].BufB;
 	        TempStep = 0;
 	      } break;
 	    }
@@ -1013,10 +1011,10 @@ void Display_Tree_Waves(void)
 	uint16_t l = 0;
 	uint16_t m = 0;
 
-	if(Display.Init == true){	
-		Display.Init = false;
+	if(display_data.init == true){	
+		display_data.init = false;
 
-		Para_Err_Check(&ParaData[WAVES]);
+		Para_Err_Check(&mode_para_data[WAVES]);
 
 		//BrightLevel = PARA_BRIGHT_MAX - ParaData[WAVES].Bright + 1;
 		BrightLevel=1;
@@ -1028,9 +1026,9 @@ void Display_Tree_Waves(void)
 		RptCtrl 	= 0;
 		TempColor 	= 0;
 
-		TopR = ParaData[WAVES].Color[TempColor].BufR;
-		TopG = ParaData[WAVES].Color[TempColor].BufG;
-		TopB = ParaData[WAVES].Color[TempColor].BufB;
+		TopR = mode_para_data[WAVES].Color[TempColor].BufR;
+		TopG = mode_para_data[WAVES].Color[TempColor].BufG;
+		TopB = mode_para_data[WAVES].Color[TempColor].BufB;
 		#if 0
 		TempR = 0;
 		TempG = 0;
@@ -1043,20 +1041,20 @@ void Display_Tree_Waves(void)
 
 		if (TopR >= TopG && TopR >= TopB){
 			FadeR = 0;
-			FadeG = TopG / (ParaData[WAVES].Other + 1);
-			FadeB = TopB / (ParaData[WAVES].Other + 1);
+			FadeG = TopG / (mode_para_data[WAVES].Other + 1);
+			FadeB = TopB / (mode_para_data[WAVES].Other + 1);
 			TempR = TopR;
 		}
 		else if (TopG >= TopB && TopG >= TopR){
 			FadeG = 0;
-			FadeR = TopR / (ParaData[WAVES].Other + 1);
-			FadeB = TopB / (ParaData[WAVES].Other + 1);
+			FadeR = TopR / (mode_para_data[WAVES].Other + 1);
+			FadeB = TopB / (mode_para_data[WAVES].Other + 1);
 			TempG = TopG;
 		}
 		else if (TopB >= TopR && TopB >= TopG){
 			FadeB = 0;
-			FadeR = TopR / (ParaData[WAVES].Other + 1);
-			FadeG = TopG / (ParaData[WAVES].Other + 1);
+			FadeR = TopR / (mode_para_data[WAVES].Other + 1);
+			FadeG = TopG / (mode_para_data[WAVES].Other + 1);
 			TempB = TopB;
 		}
 		
@@ -1070,7 +1068,7 @@ void Display_Tree_Waves(void)
   
 
 	SpeedCtrl++;
-	if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[WAVES].Speed) * (uint8_t)(1 - ModeFirstFlag))
+	if (SpeedCtrl > (PARA_SPEED_MAX - mode_para_data[WAVES].Speed) * (uint8_t)(1 - ModeFirstFlag))
 	{
 		SpeedCtrl = 0;
 
@@ -1168,7 +1166,7 @@ void Display_Tree_Waves(void)
 				}break;
 
 				case 7:{
-					for (uint8_t m = 0; m <= (PARA_OTHER_MAX - ParaData[WAVES].Other + 2); m++){
+					for (uint8_t m = 0; m <= (PARA_OTHER_MAX - mode_para_data[WAVES].Other + 2); m++){
 						if (TempR > 0 || TempG > 0 || TempB > 0){
 							TempR -= FadeR;
 							TempG -= FadeG;
@@ -1180,30 +1178,30 @@ void Display_Tree_Waves(void)
 
 				default:{
 					TempColor++;
-					if (TempColor >= ParaData[WAVES].ColorNum)	TempColor = 0;
-					TopR = ParaData[WAVES].Color[TempColor].BufR;
-					TopG = ParaData[WAVES].Color[TempColor].BufG;
-					TopB = ParaData[WAVES].Color[TempColor].BufB;
+					if (TempColor >= mode_para_data[WAVES].ColorNum)	TempColor = 0;
+					TopR = mode_para_data[WAVES].Color[TempColor].BufR;
+					TopG = mode_para_data[WAVES].Color[TempColor].BufG;
+					TopB = mode_para_data[WAVES].Color[TempColor].BufB;
 					TempR = 0;
 					TempG = 0;
 					TempB = 0;
 
 					if (TopR >= TopG && TopR >= TopB){
 						FadeR = 0;
-						FadeG = TopG / (ParaData[WAVES].Other + 1);
-						FadeB = TopB / (ParaData[WAVES].Other + 1);
+						FadeG = TopG / (mode_para_data[WAVES].Other + 1);
+						FadeB = TopB / (mode_para_data[WAVES].Other + 1);
 						TempR = TopR;
 					}
 					else if (TopG >= TopB && TopG >= TopR){
 						FadeG = 0;
-						FadeR = TopR / (ParaData[WAVES].Other + 1);
-						FadeB = TopB / (ParaData[WAVES].Other + 1);
+						FadeR = TopR / (mode_para_data[WAVES].Other + 1);
+						FadeB = TopB / (mode_para_data[WAVES].Other + 1);
 						TempG = TopG;
 					}
 					else if (TopB >= TopR && TopB >= TopG){
 						FadeB = 0;
-						FadeR = TopR / (ParaData[WAVES].Other + 1);
-						FadeG = TopG / (ParaData[WAVES].Other + 1);
+						FadeR = TopR / (mode_para_data[WAVES].Other + 1);
+						FadeG = TopG / (mode_para_data[WAVES].Other + 1);
 						TempB = TopB;
 					}
 					TempStep = 0;
@@ -1251,7 +1249,7 @@ void Display_Tree_Waves(void)
 				}break;
 
 				case 4:{
-					for (uint8_t m = 0; m <= (PARA_OTHER_MAX - ParaData[WAVES].Other + 2); m++){
+					for (uint8_t m = 0; m <= (PARA_OTHER_MAX - mode_para_data[WAVES].Other + 2); m++){
 						if (TempR > 0 || TempG > 0 || TempB > 0){
 							TempR -= FadeR;
 							TempG -= FadeG;
@@ -1264,30 +1262,30 @@ void Display_Tree_Waves(void)
 				default:
 				{
 					TempColor++;
-					if (TempColor >= ParaData[WAVES].ColorNum)	TempColor = 0;
-					TopR = ParaData[WAVES].Color[TempColor].BufR;
-					TopG = ParaData[WAVES].Color[TempColor].BufG;
-					TopB = ParaData[WAVES].Color[TempColor].BufB;
+					if (TempColor >= mode_para_data[WAVES].ColorNum)	TempColor = 0;
+					TopR = mode_para_data[WAVES].Color[TempColor].BufR;
+					TopG = mode_para_data[WAVES].Color[TempColor].BufG;
+					TopB = mode_para_data[WAVES].Color[TempColor].BufB;
 					TempR = 0;
 					TempG = 0;
 					TempB = 0;
 
 					if (TopR >= TopG && TopR >= TopB){
 						FadeR = 0;
-						FadeG = TopG / (ParaData[WAVES].Other + 1);
-						FadeB = TopB / (ParaData[WAVES].Other + 1);
+						FadeG = TopG / (mode_para_data[WAVES].Other + 1);
+						FadeB = TopB / (mode_para_data[WAVES].Other + 1);
 						TempR = TopR;
 					}
 					else if (TopG >= TopB && TopG >= TopR){
 						FadeG = 0;
-						FadeR = TopR / (ParaData[WAVES].Other + 1);
-						FadeB = TopB / (ParaData[WAVES].Other + 1);
+						FadeR = TopR / (mode_para_data[WAVES].Other + 1);
+						FadeB = TopB / (mode_para_data[WAVES].Other + 1);
 						TempG = TopG;
 					}
 					else if (TopB >= TopR && TopB >= TopG){
 						FadeB = 0;
-						FadeR = TopR / (ParaData[WAVES].Other + 1);
-						FadeG = TopG / (ParaData[WAVES].Other + 1);
+						FadeR = TopR / (mode_para_data[WAVES].Other + 1);
+						FadeG = TopG / (mode_para_data[WAVES].Other + 1);
 						TempB = TopB;
 					}
 					TempStep = 0;
@@ -1321,11 +1319,11 @@ void Display_Tree_Waves(void)
 	uint16_t	l = 0;
 	uint16_t	m = 0;
 
-	if (Display.Init == TRUE)
+	if (display_data.init == TRUE)
 	{
-		Display.Init = FALSE;
+		display_data.init = FALSE;
 
-		Para_Err_Check(&ParaData[WAVES]);
+		Para_Err_Check(&mode_para_data[WAVES]);
 
 		//BrightLevel = PARA_BRIGHT_MAX - ParaData[WAVES].Bright + 1;
 		BrightLevel=1;
@@ -1334,12 +1332,12 @@ void Display_Tree_Waves(void)
 		TempStep = 0;
 		SpeedCtrl = 0;
 		HoldTime = 0;
-		TempR = ParaData[WAVES].Color[TempColor].BufR;
-		TempG = ParaData[WAVES].Color[TempColor].BufG;
-		TempB = ParaData[WAVES].Color[TempColor].BufB;
+		TempR = mode_para_data[WAVES].Color[TempColor].BufR;
+		TempG = mode_para_data[WAVES].Color[TempColor].BufG;
+		TempB = mode_para_data[WAVES].Color[TempColor].BufB;
 		Display_All_Set(TempR, TempG, TempB);
 
-		if (ParaData[WAVES].ColorNum == 1)
+		if (mode_para_data[WAVES].ColorNum == 1)
 		{
 			TopR = 0;
 			TopG = 0;
@@ -1348,9 +1346,9 @@ void Display_Tree_Waves(void)
 		else 
 		{
 			TempColor = 1;
-			TopR = ParaData[WAVES].Color[TempColor].BufR;
-			TopG = ParaData[WAVES].Color[TempColor].BufG;
-			TopB = ParaData[WAVES].Color[TempColor].BufB;
+			TopR = mode_para_data[WAVES].Color[TempColor].BufR;
+			TopG = mode_para_data[WAVES].Color[TempColor].BufG;
+			TopB = mode_para_data[WAVES].Color[TempColor].BufB;
 		}
 
 		//Get the fade level
@@ -1371,7 +1369,7 @@ void Display_Tree_Waves(void)
 
 
 	SpeedCtrl++;
-	if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[WAVES].Speed) * (uint8_t)(1 - ModeFirstFlag))
+	if (SpeedCtrl > (PARA_SPEED_MAX - mode_para_data[WAVES].Speed) * (uint8_t)(1 - ModeFirstFlag))
 	{
 		SpeedCtrl = 0;
 
@@ -1410,19 +1408,19 @@ void Display_Tree_Waves(void)
 
 				default:
 				{
-					if (ParaData[WAVES].ColorNum == 1)
+					if (mode_para_data[WAVES].ColorNum == 1)
 					{
-						TopR = ParaData[WAVES].Color[0].BufR - TempR;
-						TopG = ParaData[WAVES].Color[0].BufG - TempG;
-						TopB = ParaData[WAVES].Color[0].BufB - TempB;
+						TopR = mode_para_data[WAVES].Color[0].BufR - TempR;
+						TopG = mode_para_data[WAVES].Color[0].BufG - TempG;
+						TopB = mode_para_data[WAVES].Color[0].BufB - TempB;
 					}
 					else
 					{
 						TempColor++;
-						if (TempColor >= ParaData[WAVES].ColorNum)   TempColor = 0;
-						TopR = ParaData[WAVES].Color[TempColor].BufR;
-						TopG = ParaData[WAVES].Color[TempColor].BufG;
-						TopB = ParaData[WAVES].Color[TempColor].BufB;
+						if (TempColor >= mode_para_data[WAVES].ColorNum)   TempColor = 0;
+						TopR = mode_para_data[WAVES].Color[TempColor].BufR;
+						TopG = mode_para_data[WAVES].Color[TempColor].BufG;
+						TopB = mode_para_data[WAVES].Color[TempColor].BufB;
 					}
 
 					//Get the fade value again
@@ -1467,10 +1465,10 @@ void Display_Tree_Updwn(void)
 {
 	uint16 i = 0, j = 0, k = 0;
 
-	if(Display.Init == true){	
-		Display.Init = false;
+	if(display_data.init == true){	
+		display_data.init = false;
 
-		Para_Err_Check(&ParaData[UPDWN]);
+		Para_Err_Check(&mode_para_data[UPDWN]);
 
 		//BrightLevel = PARA_BRIGHT_MAX - ParaData[UPDWN].Bright + 1;
 		BrightLevel=1;
@@ -1483,14 +1481,14 @@ void Display_Tree_Updwn(void)
 		RptCtrl 	= 0;
 		TempColor 	= 0;
 		TempColor1 = 1;
-		if (TempColor1 >= ParaData[UPDWN].ColorNum)	TempColor1 = 0;
+		if (TempColor1 >= mode_para_data[UPDWN].ColorNum)	TempColor1 = 0;
 		
-		FadeR = ParaData[UPDWN].Color[TempColor].BufR / FADE_LEVEL;
-		FadeG = ParaData[UPDWN].Color[TempColor].BufG / FADE_LEVEL;
-		FadeB = ParaData[UPDWN].Color[TempColor].BufB / FADE_LEVEL;
-		FadeR1 = ParaData[UPDWN].Color[TempColor1].BufR / FADE_LEVEL;
-		FadeG1 = ParaData[UPDWN].Color[TempColor1].BufG / FADE_LEVEL;
-		FadeB1 = ParaData[UPDWN].Color[TempColor1].BufB / FADE_LEVEL;
+		FadeR = mode_para_data[UPDWN].Color[TempColor].BufR / FADE_LEVEL;
+		FadeG = mode_para_data[UPDWN].Color[TempColor].BufG / FADE_LEVEL;
+		FadeB = mode_para_data[UPDWN].Color[TempColor].BufB / FADE_LEVEL;
+		FadeR1 = mode_para_data[UPDWN].Color[TempColor1].BufR / FADE_LEVEL;
+		FadeG1 = mode_para_data[UPDWN].Color[TempColor1].BufG / FADE_LEVEL;
+		FadeB1 = mode_para_data[UPDWN].Color[TempColor1].BufB / FADE_LEVEL;
 
 		TempR = 0;
 		TempG = 0;
@@ -1625,15 +1623,15 @@ void Display_Tree_Updwn(void)
 			//change the color
 			default:{
 				TempColor++;
-				if (TempColor >= ParaData[UPDWN].ColorNum)	TempColor = 0;
+				if (TempColor >= mode_para_data[UPDWN].ColorNum)	TempColor = 0;
 				TempColor1++;
-				if (TempColor1 >= ParaData[UPDWN].ColorNum) TempColor1 = 0;
-				FadeR = ParaData[UPDWN].Color[TempColor].BufR / FADE_LEVEL;
-				FadeG = ParaData[UPDWN].Color[TempColor].BufG / FADE_LEVEL;
-				FadeB = ParaData[UPDWN].Color[TempColor].BufB / FADE_LEVEL;
-				FadeR1 = ParaData[UPDWN].Color[TempColor1].BufR / FADE_LEVEL;
-				FadeG1 = ParaData[UPDWN].Color[TempColor1].BufG / FADE_LEVEL;
-				FadeB1 = ParaData[UPDWN].Color[TempColor1].BufB / FADE_LEVEL;
+				if (TempColor1 >= mode_para_data[UPDWN].ColorNum) TempColor1 = 0;
+				FadeR = mode_para_data[UPDWN].Color[TempColor].BufR / FADE_LEVEL;
+				FadeG = mode_para_data[UPDWN].Color[TempColor].BufG / FADE_LEVEL;
+				FadeB = mode_para_data[UPDWN].Color[TempColor].BufB / FADE_LEVEL;
+				FadeR1 = mode_para_data[UPDWN].Color[TempColor1].BufR / FADE_LEVEL;
+				FadeG1 = mode_para_data[UPDWN].Color[TempColor1].BufG / FADE_LEVEL;
+				FadeB1 = mode_para_data[UPDWN].Color[TempColor1].BufB / FADE_LEVEL;
 				TempStep = 0;
 				LayerStep = 0;
 				TempR = 0;
@@ -1654,11 +1652,11 @@ void Display_Tree_Glow(void)
   	uint16_t	l = 0;
   	uint16_t	m = 0;
   
-	if(Display.Init == true)
+	if(display_data.init == true)
 	{	
-	    Display.Init = false;
+	    display_data.init = false;
 
-	    Para_Err_Check(&ParaData[GLOW]);
+	    Para_Err_Check(&mode_para_data[GLOW]);
 	    
 	    //BrightLevel = PARA_BRIGHT_MAX - ParaData[GLOW].Bright + 1;
 	    BrightLevel=1;
@@ -1681,10 +1679,10 @@ void Display_Tree_Glow(void)
 
 	    for (i = 0; i < LED_TOTAL; i++)
 	    {
-			j = i % ParaData[GLOW].ColorNum;
-			LedData[i].DutyR = ParaData[GLOW].Color[j].BufR;
-			LedData[i].DutyG = ParaData[GLOW].Color[j].BufG;
-			LedData[i].DutyB = ParaData[GLOW].Color[j].BufB;
+			j = i % mode_para_data[GLOW].ColorNum;
+			LedData[i].DutyR = mode_para_data[GLOW].Color[j].BufR;
+			LedData[i].DutyG = mode_para_data[GLOW].Color[j].BufG;
+			LedData[i].DutyB = mode_para_data[GLOW].Color[j].BufB;
 	    }
 
 	    ModeFirstFlag = true;
@@ -1692,7 +1690,7 @@ void Display_Tree_Glow(void)
 	}
   
   	SpeedCtrl++;
-  	if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[GLOW].Speed))
+  	if (SpeedCtrl > (PARA_SPEED_MAX - mode_para_data[GLOW].Speed))
   	{
 		if (ModeFirstFlag)
 		{
@@ -1715,10 +1713,10 @@ void Display_Tree_Glow(void)
 					continue;
 				}
 
-				j = i % ParaData[GLOW].ColorNum;
-				TopR = ParaData[GLOW].Color[j].BufR;
-				TopG = ParaData[GLOW].Color[j].BufG;
-				TopB = ParaData[GLOW].Color[j].BufB;
+				j = i % mode_para_data[GLOW].ColorNum;
+				TopR = mode_para_data[GLOW].Color[j].BufR;
+				TopG = mode_para_data[GLOW].Color[j].BufG;
+				TopB = mode_para_data[GLOW].Color[j].BufB;
 				FadeR = TopR / FADE_LEVEL;
 				FadeG = TopG / FADE_LEVEL;
 				FadeB = TopB / FADE_LEVEL;
@@ -1763,14 +1761,14 @@ void Display_Tree_Color_Rand(void)
   uint16_t	l = 0;
   uint16_t	m = 0;
   
-  if (Display.Init == true){
-    Display.Init  = false;
-    Para_Err_Check(&ParaData[COLOR_RAND]);
+  if (display_data.init == true){
+    display_data.init  = false;
+    Para_Err_Check(&mode_para_data[COLOR_RAND]);
     //BrightLevel = PARA_BRIGHT_MAX - ParaData[COLOR_RAND].Bright + 1;
     BrightLevel=1;
 
     SpeedCtrl = 0;
-    OtherCtrl = ParaData[COLOR_RAND].Other;
+    OtherCtrl = mode_para_data[COLOR_RAND].Other;
 
     TempR = 0;
     TempG = 0;
@@ -1792,7 +1790,7 @@ void Display_Tree_Color_Rand(void)
   }
     
   SpeedCtrl++;
-  if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[COLOR_RAND].Speed) * (uint8_t)(1 - ModeFirstFlag))
+  if (SpeedCtrl > (PARA_SPEED_MAX - mode_para_data[COLOR_RAND].Speed) * (uint8_t)(1 - ModeFirstFlag))
   {
     SpeedCtrl = 0;
 
@@ -1844,10 +1842,10 @@ void Display_Tree_Instead(void)
 	uint16_t j = 0;
 	uint16_t k = 0;
 
-	if (Display.Init == true)
+	if (display_data.init == true)
 	{
-		Display.Init = false;
-		Para_Err_Check(&ParaData[INSTEAD]);
+		display_data.init = false;
+		Para_Err_Check(&mode_para_data[INSTEAD]);
 
 		//BrightLevel = PARA_BRIGHT_MAX - ParaData[INSTEAD].Bright + 1;
 		BrightLevel=1;
@@ -1872,17 +1870,17 @@ void Display_Tree_Instead(void)
 		SpeedCtrl = 0;
 
 
-		FadeR = ParaData[INSTEAD].Color[0].BufR / FADE_LEVEL;
-		FadeG = ParaData[INSTEAD].Color[0].BufG / FADE_LEVEL;
-		FadeB = ParaData[INSTEAD].Color[0].BufB / FADE_LEVEL;
+		FadeR = mode_para_data[INSTEAD].Color[0].BufR / FADE_LEVEL;
+		FadeG = mode_para_data[INSTEAD].Color[0].BufG / FADE_LEVEL;
+		FadeB = mode_para_data[INSTEAD].Color[0].BufB / FADE_LEVEL;
 		return;
 	}
 
 
 	/* Mode Control */
-	for (k = 0; k < ParaData[INSTEAD].Speed + 1; k++)
+	for (k = 0; k < mode_para_data[INSTEAD].Speed + 1; k++)
 	{
-		switch (ParaData[INSTEAD].ColorNum)
+		switch (mode_para_data[INSTEAD].ColorNum)
 		{
 			case 1:
 			{
@@ -1898,9 +1896,9 @@ void Display_Tree_Instead(void)
 								j = (uint16_t)rand() % LED_TOTAL;
 							}while(	LedPick[j] == 1);
 							LedPick[j] = 1;
-							LedData[j].DutyR = ParaData[INSTEAD].Color[TempColor].BufR;
-							LedData[j].DutyG = ParaData[INSTEAD].Color[TempColor].BufG;
-							LedData[j].DutyB = ParaData[INSTEAD].Color[TempColor].BufB;
+							LedData[j].DutyR = mode_para_data[INSTEAD].Color[TempColor].BufR;
+							LedData[j].DutyG = mode_para_data[INSTEAD].Color[TempColor].BufG;
+							LedData[j].DutyB = mode_para_data[INSTEAD].Color[TempColor].BufB;
 							LedPickAll++;
 						}
 						else
@@ -1945,9 +1943,9 @@ void Display_Tree_Instead(void)
 						j = (uint16_t)rand() % LED_TOTAL;
 					}while(	LedPick[j] == 1);
 					LedPick[j] = 1;
-					LedData[j].DutyR = ParaData[INSTEAD].Color[TempColor].BufR;
-					LedData[j].DutyG = ParaData[INSTEAD].Color[TempColor].BufG;
-					LedData[j].DutyB = ParaData[INSTEAD].Color[TempColor].BufB;
+					LedData[j].DutyR = mode_para_data[INSTEAD].Color[TempColor].BufR;
+					LedData[j].DutyG = mode_para_data[INSTEAD].Color[TempColor].BufG;
+					LedData[j].DutyB = mode_para_data[INSTEAD].Color[TempColor].BufB;
 					LedPickAll++;
 				}
 				else
@@ -1961,7 +1959,7 @@ void Display_Tree_Instead(void)
 					}
 					
 					TempColor++;
-					if (TempColor >= ParaData[INSTEAD].ColorNum)
+					if (TempColor >= mode_para_data[INSTEAD].ColorNum)
 					{
 						TempColor = 0x0;
 					}
@@ -1977,10 +1975,10 @@ void Display_Tree_Carnival(void)
 	uint16_t	l = 0;
 	uint16_t	m = 0;
 
-	if (Display.Init == true)
+	if (display_data.init == true)
 	{
-		Display.Init  = false;
-		Para_Err_Check(&ParaData[CARNIVAL]);
+		display_data.init  = false;
+		Para_Err_Check(&mode_para_data[CARNIVAL]);
 		//BrightLevel = PARA_BRIGHT_MAX - ParaData[CARNIVAL].Bright + 1;
 		BrightLevel=1;
 
@@ -2000,7 +1998,7 @@ void Display_Tree_Carnival(void)
 	}
 
 	SpeedCtrl++;
-	if (SpeedCtrl > (PARA_SPEED_MAX - ParaData[CARNIVAL].Speed) * (uint8_t)( 1 - ModeFirstFlag))
+	if (SpeedCtrl > (PARA_SPEED_MAX - mode_para_data[CARNIVAL].Speed) * (uint8_t)( 1 - ModeFirstFlag))
 	{
 		SpeedCtrl = 0;
 
@@ -2083,15 +2081,14 @@ void Display_Tree_Carnival(void)
 void Display_Tree_Alternate(void)
 {
 	uint16_t	i = 0;
-	uint16_t	j = 0;
 	uint16_t	l = 0;
 	uint16_t	m = 0;
   
-	if(Display.Init == true)
+	if(display_data.init == true)
 	{	
-	    Display.Init = false;
+	    display_data.init = false;
 
-	    Para_Err_Check(&ParaData[ALTERNATE]);
+	    Para_Err_Check(&mode_para_data[ALTERNATE]);
 	    
 	    //BrightLevel = PARA_BRIGHT_MAX - ParaData[ALTERNATE].Bright + 1;
 	    BrightLevel=1;
@@ -2108,7 +2105,7 @@ void Display_Tree_Alternate(void)
 	    TopG = 240;
 	    TopB = 240;
 
-	    switch (ParaData[ALTERNATE].Speed)
+	    switch (mode_para_data[ALTERNATE].Speed)
 	    {
 			case 0:		FadeR = 10;	RptTotal = 60; break;
 			case 1:		FadeR = 15; RptTotal = 40; break;

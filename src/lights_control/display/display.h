@@ -15,6 +15,8 @@
 #include <stdbool.h>
 #include "../leddrv/ws2812_i2s.h"
 #include "../../include/m2m_log.h"
+#include "../process/data_process.h"
+
 
 
 //const value define
@@ -22,6 +24,14 @@
 
 #define     COLOR_VAL_MAX         (uint8_t)0x0f  	/* the single colors count  number */
 #define     THEME_VAL_MAX         (uint8_t)0x0d   	/* the themes count number */
+
+
+/*
+ * string layer define
+ */
+#define		STR_LAYER_MAX		28
+#define		STR_LAYER_SEC		7
+
 #define     FADE_LEVEL            (uint8_t)15
 
 /*
@@ -31,7 +41,7 @@
 #define     PARA_BRIGHT_MAX       	(uint8_t)4
 #define     PARA_SPEED_MAX        	(uint8_t)4
 #define     PARA_OTHER_MAX        	(uint8_t)10
-#define     PARA_COLORNUM_MAX     	(uint8_t)16   /* each mode allow to own MODE_COLOR_MAX color value */
+#define     PARA_COLORNUM_MAX     	(uint8_t)15   /* each mode allow to own MODE_COLOR_MAX color value */
 
 
 #define     POWER_OFF             	(uint8_t)0xf0
@@ -39,7 +49,14 @@
 #define     RED_FLASH             	(uint8_t)0xf2
 #define     GREEN_FLASH           	(uint8_t)0xf3
 #define     BLUE_FLASH            	(uint8_t)0xf4
+#define		LAYOUT_PHOTO_CTRL		(uint8_t)0xf9
+#define		LAYOUT_ENTER		 	(uint8_t)0xfa
+#define		LAYOUT_TEST				(uint8_t)0xfb
+#define		LAYOUT_SAVE				(uint8_t)0xfc
+#define		LAYOUT_CANCEL			(uint8_t)0xfd
+#define     MUSIC_MODE            	(uint8_t)0xfe
 #define     COMMON_MODE_LIMIT     	POWER_OFF
+
 
 
 #define     STEADY                	(uint8_t)0x00
@@ -58,8 +75,8 @@
 #define		CARNIVAL				(uint8_t)0x0d
 #define		ALTERNATE				(uint8_t)0x0e
 
-
-#define     MODE_MAX              ALTERNATE
+#define		CURRENT_MODE_MAX		ALTERNATE
+#define     MODE_MAX              	30
 
 #define		RAND()				RndSeed += 199;srand(RndSeed);
 
@@ -70,12 +87,14 @@
 #define	LAYOUT_3D				2
 
 //type redefine
-typedef struct{
-  uint8 Mode;
-  uint8 ModeBuf;
-  uint8 Init;
-  uint8 LayoutNum;
+typedef struct
+{
+  uint8_t mode;
+  uint8_t mode_buf;
+  uint8_t init;
+  uint8_t reserved;
 }Display_t;
+
 
 #define PARA_PACK_HEADRE_BYTE	8
 typedef struct{
@@ -87,7 +106,14 @@ typedef struct{
 	uint8_t   	Chksum;
 	uint8_t   	Reserve1;
 	uint8_t   	ColorNum;
-	struct COLOR_TYPE{
+	struct RCV_COLOR_TYPE
+	{
+		uint8_t		BufR;
+		uint8_t		BufG;
+		uint8_t 	BufB;
+	}RcvColor[PARA_COLORNUM_MAX + 1];
+	struct COLOR_TYPE
+	{
 		uint8_t   BufR;
 		uint8_t   BufG;
 		uint8_t   BufB;
@@ -112,6 +138,13 @@ void Display_All_Set(uint8_t r, uint8_t g, uint8_t b);
 void Display_Power_Off(void);
 void Display_Power_On(void);
 void Display_All_Flash(uint8_t r, uint8_t g, uint8_t b);
+void Display_Layout_Photo_Ctrl(void);
+void Display_Layout_Enter(void);
+void Display_Layout_Cancel(void);
+void Display_Layout_Test(void);
+void Display_Layout_Save(void);
+void Display_Music(void);
+
 
 
 //tree functions
@@ -138,14 +171,16 @@ void Display_Tree_Alternate(void);
 void Display_Layout_None_Init(void);
 
 
+
 //exported parameters
-extern Display_t    Display;
-extern ModePara_t   ParaData[];
+extern Display_t    display_data;
+extern ModePara_t   mode_para_data[];
 extern Layer_t      Layer[];
 extern Layer_t 		LayerTemp[];
 extern uint8_t      LayerMax;
 extern uint8_t		LayerTest;
-
+extern uint8_t 		MusicMode;
+extern bool			MusicUpdateFlag;
 
 
 
@@ -177,9 +212,10 @@ extern sint16_t          RndSeed;
 extern uint16_t           HoldTime;
 extern uint8_t           LayerStep;
 extern uint16_t          LedPickAll;
-extern uint8_t           ModeTime[LED_TOTAL];
-extern uint8_t           ModeStep[LED_TOTAL];
-extern uint8_t           LedPick[LED_TOTAL];
-extern bool			  	ModeFirstFlag;
+extern uint8_t           ModeTime[];
+extern uint8_t           ModeStep[];
+extern uint16_t           LedPick[];
+extern bool			  	 ModeFirstFlag;
 
 #endif
+

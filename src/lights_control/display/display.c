@@ -1,20 +1,22 @@
 /**************************************************************
   * 
-  * FileName  Display.c
+  * FileName  display_data.c
   * Date      26 NOV 2018
   * Author    DS.Chin
   *
 ****************************************************************/
-#include "Display.h"
+#include "display.h"
 
 
 //global parameters
-Display_t   Display;
-ModePara_t  ParaData[MODE_MAX + 1];
+Display_t   display_data;
+ModePara_t  mode_para_data[MODE_MAX + 1];
 Layer_t     Layer[LAYER_MAX];
 Layer_t 	LayerTemp[LAYER_MAX];
 uint8_t     LayerMax;
 uint8_t		LayerTest;
+uint8_t 	MusicMode;
+bool		MusicUpdateFlag;
 
 
 uint8_t           SpeedCtrl;
@@ -45,7 +47,7 @@ uint8_t           LayerStep;
 uint16_t          LedPickAll;
 uint8_t           ModeTime[LED_TOTAL];
 uint8_t           ModeStep[LED_TOTAL];
-uint8_t           LedPick[LED_TOTAL];
+uint16_t          LedPick[LED_TOTAL];
 int16_t           RndSeed;
 bool			  ModeFirstFlag;
 
@@ -58,40 +60,45 @@ bool			  ModeFirstFlag;
 void Display_Control(void)
 {
 	//common mode display
-	if (Display.Mode >= COMMON_MODE_LIMIT)
+	if (display_data.mode >= COMMON_MODE_LIMIT)
 	{
-		switch (Display.Mode)
+		switch (display_data.mode)
 		{  
 			case POWER_OFF:   		Display_Power_Off();                break;
 			case POWER_ON:    		Display_Power_On();                 break;
 			case RED_FLASH:   		Display_All_Flash(250, 0, 0);       break;
 			case GREEN_FLASH: 		Display_All_Flash(0, 250, 0);       break;
 			case BLUE_FLASH:  		Display_All_Flash(0, 0, 250);       break;
+			case LAYOUT_PHOTO_CTRL:	Display_Layout_Photo_Ctrl();		break;
+			case LAYOUT_ENTER: 		Display_Layout_Enter();				break;
+			case LAYOUT_CANCEL: 	Display_Layout_Cancel();			break;
+			case LAYOUT_TEST:		Display_Layout_Test();				break;
+			case LAYOUT_SAVE:		Display_Layout_Save();				break;
+			case MUSIC_MODE:		Display_Music();					break;
 			default:  break;
 		}
 
 		return;
 	}
 
-
 	//tree mode display
-	switch (Display.Mode)
+	switch (display_data.mode)
 	{
 		case STEADY:      	Display_Tree_Steady();        	break;
 		case SPARKLE:     	Display_Tree_Sparkle();       	break;
 		case RAINBOW:     	Display_Tree_Rainbow();       	break;
 		case FADE:        	Display_Tree_Fade();          	break;
 		case SNOW:        	Display_Tree_Snow();          	break;
+		case INSTEAD:       Display_Tree_Instead();         break;
 		case TWINKLE:     	Display_Tree_Twinkle();       	break;
 		case FIREWORKS:   	Display_Tree_Fireworks();     	break;
-		case ROLLING:  		Display_Tree_Rolling();    		break;
+		case ROLLING:  		Display_Tree_Rolling();    	break;
 		case WAVES:       	Display_Tree_Waves();         	break;
 		case UPDWN:       	Display_Tree_Updwn();         	break;
 		case GLOW:        	Display_Tree_Glow();          	break;
 		case COLOR_RAND:  	Display_Tree_Color_Rand();    	break;
-		case INSTEAD:		Display_Tree_Instead();			break;
-		case CARNIVAL:		Display_Tree_Carnival();		break;
-		case ALTERNATE:		Display_Tree_Alternate();		break;
+		case CARNIVAL:		Display_Tree_Carnival();	 	break;
+		case ALTERNATE:		Display_Tree_Alternate();	 	break;
 		default:    										break;
 	}
 }
@@ -109,50 +116,59 @@ void Display_Control(void)
   */
 uint8_t  Para_Err_Check(ModePara_t * para)
 {
-  uint8_t   chksum = para->Chksum;
-  char      err = 0;
+	uint8_t   chksum = para->Chksum;
+	char	  err = 0;
 
-  //reset the bright to 4 level
-  if (para->Bright > PARA_BRIGHT_MAX){
-    chksum ^= para->Bright;
-    para->Bright = 0x4;
-    chksum ^= 0x4;
-    err |= 0x01;
-  }
+	//reset the bright to 4 level
+	if (para->Bright > PARA_BRIGHT_MAX)
+	{
+		chksum ^= para->Bright;
+		para->Bright = 0x4;
+		chksum ^= 0x4;
+		err |= 0x01;
+	}
 
-  //reset the speed to maximum
-  if (para->Speed > PARA_SPEED_MAX){
-    chksum ^= para->Speed;
-    para->Speed = PARA_SPEED_MAX;
-    chksum ^= PARA_SPEED_MAX;
-    err |= 0x02;
-  }
+	//reset the speed to maximum
+	if (para->Speed > PARA_SPEED_MAX)
+	{
+		chksum ^= para->Speed;
+		para->Speed = PARA_SPEED_MAX;
+		chksum ^= PARA_SPEED_MAX;
+		err |= 0x02;
+	}
 
-  //reset the othr parameter to maximum
-  if (para->Other > PARA_OTHER_MAX){
-    chksum ^= para->Other;
-    para->Other = PARA_OTHER_MAX;
-    chksum ^= PARA_OTHER_MAX;
-    err |= 0x04;
-  }
+	//reset the othr parameter to maximum
+	if (para->Other > PARA_OTHER_MAX)
+	{
+		chksum ^= para->Other;
+		para->Other = PARA_OTHER_MAX;
+		chksum ^= PARA_OTHER_MAX;
+		err |= 0x04;
+	}
 
-  //reset the color to red
-  if (para->ColorNum > PARA_COLORNUM_MAX || para->ColorNum == 0){
-    chksum ^= para->ColorNum;
-    chksum ^= para->Color[0].BufR;
-    chksum ^= para->Color[0].BufG;
-    chksum ^= para->Color[0].BufB;
-    para->ColorNum = 0x1;
-    para->Color[0].BufR = 250;
-    para->Color[0].BufG = 0;
-    para->Color[0].BufB = 0;
-    chksum ^= 0x1;
-    chksum ^= 250;
-    err |= 0x08;
-  }
+	//reset the color to red
+	if (para->ColorNum > PARA_COLORNUM_MAX || para->ColorNum == 0 || (para->ColorVal > (COLOR_VAL_MAX+THEME_VAL_MAX) && para->ColorVal != 0xff))
+	{
+		para->ColorNum = 0x1;
+		para->ColorVal = 0;
+		para->RcvColor[0].BufR = 250;
+		para->RcvColor[0].BufG = 0;
+		para->RcvColor[0].BufB = 0;
+		para->Color[0].BufR = 250;
+		para->Color[0].BufG = 0;
+		para->Color[0].BufB = 0;
+		err |= 0x08;
+	}
 
-  return err;
+	if (err > 0)
+	{
+		para->Chksum = 0;
+		para->Chksum = chksum_cal((const uint8_t *)para, 8+para->ColorNum * 3);
+	}
+
+	return err;
 }
+
 
 
 
@@ -181,8 +197,8 @@ void Display_All_Set(uint8_t r, uint8_t g, uint8_t b)
   */
 void Display_Power_Off(void)
 {
-  if (Display.Init == true){
-    Display.Init = false;
+  if (display_data.init == true){
+    display_data.init = false;
     Display_All_Set(0, 0, 0);
   }
 }
@@ -194,12 +210,12 @@ void Display_Power_Off(void)
 void Display_Power_On(void)
 {
   //error check
-  if (Display.ModeBuf >= MODE_MAX)
+  if (display_data.mode_buf > CURRENT_MODE_MAX)
   {
-    Display.ModeBuf = 0x1; 
+    display_data.mode_buf = 0x1; 
   }
-  Display.Mode = Display.ModeBuf;
-  Display.Init = true;
+  display_data.mode= display_data.mode_buf;
+  display_data.init = true;
 }
 
 
@@ -208,8 +224,8 @@ void Display_Power_On(void)
   */
 void Display_All_Flash(uint8_t r, uint8_t g, uint8_t b)
 {
-  if (Display.Init == true){
-    Display.Init = false;
+  if (display_data.init == true){
+    display_data.init = false;
     BrightLevel = 1;
     Display_All_Set(0,0,0);
     SpeedCtrl = 0;
@@ -236,8 +252,8 @@ void Display_All_Flash(uint8_t r, uint8_t g, uint8_t b)
       } break;
 
       default:{
-        Display.Mode = Display.ModeBuf;
-        Display.Init = true;
+        display_data.mode= display_data.mode_buf;
+        display_data.init = true;
       } break;
     }
   }  

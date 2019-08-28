@@ -91,7 +91,7 @@ void Led_Entrance(void)
 	if (TimerUpdateFlag == true)
 	{
 		TimerUpdateFlag = false;
-		Timer_Count_Down();
+		timing_task();
 	}
 
 	#else
