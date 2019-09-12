@@ -29,7 +29,7 @@
  * PRODUCT_TYPE		super lights(SL90)  -0x01
  * PROTOCOL_VER		protocol version
  */
-#define     PRODUCT_TYPE            		(uint8_t)0x01
+#define     PRODUCT_TYPE            		(uint8_t)0x02
 #define     APP_PROTOCOL_VER            	(uint8_t)0x01
 #define     VOICE_PROTOCOL_VER            	(uint8_t)0x55
 

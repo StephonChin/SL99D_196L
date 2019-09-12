@@ -345,7 +345,7 @@ void User_Data_Init(void)
 
 		//mode status and mode data
 		uint8_t i = 0;
-		for (i = 0; i < CURRENT_MODE_MAX; i++)
+		for (i = 0; i <= CURRENT_MODE_MAX; i++)
 	  	{
 	  		uint8_t err_flag = false;
 
@@ -354,6 +354,11 @@ void User_Data_Init(void)
 	  		{
 				err_flag = true;
 				enable_user_normal_flash_write();
+	  		}
+
+	  		if (i == RAINBOW || i == COLOR_RAND || i == CARNIVAL || i == ALTERNATE)
+	  		{
+				mode_para_data[i].ColorNum = 0;
 	  		}
 	  		
 	  		if (err_flag)
@@ -466,6 +471,7 @@ void User_Data_Init(void)
 	{
 		mode_para_data[i].Chksum = 0;
 		mode_para_data[i].Chksum = chksum_cal((const uint8_t *)&mode_para_data[i], 8 + mode_para_data[i].ColorNum * 3);
+		mode_para_data[i].Chksum ^= mode_para_data[i].ColorVal;	//color val do not check sum
 
 		if (mode_para_data[i].ColorVal == 0xff)
 		{
@@ -595,6 +601,7 @@ void Key_Process(void)
 			//Clear the old check sum
 			mode_para_data[i].Chksum = 0;
 			mode_para_data[i].Chksum = chksum_cal((const uint8_t *)&mode_para_data[i], 8 + j * 3);
+			mode_para_data[i].Chksum ^= mode_para_data[i].ColorVal;
 
 			enable_user_normal_flash_write();
 		}
@@ -822,6 +829,7 @@ void App_data_prcoess(void)
 				//caculate the new checksum
 				mode_para_data[i].Chksum = 0;
 				mode_para_data[i].Chksum = chksum_cal((const uint8_t *)&mode_para_data[i], 8 + j * 3);
+				mode_para_data[i].Chksum ^= mode_para_data[i].ColorVal;
 
 				//intialize the mode
 				display_data.init = true;
@@ -910,13 +918,14 @@ void App_data_prcoess(void)
 					uint8_t *reply_status_base;
 					uint8_t	size = 44 + CURRENT_MODE_MAX + 1;
 
-					reply_status = mmalloc(size);
-					reply_status_base = reply_status;
+					reply_status_base = mmalloc(size);
+					reply_status = reply_status_base;
 
 					if (reply_status == 0)	break;
 
 					*reply_status++ = display_data.mode;
-					for (uint8_t i = 0; i < 3; i++)
+					*reply_status++ = display_data.mode_buf;
+					for (uint8_t i = 0; i < 2; i++)
 					{
 						*reply_status++ = 0;		//reserved
 					}
@@ -946,7 +955,9 @@ void App_data_prcoess(void)
 
 					res_to_app(ALL_STATUS_ACK, (const uint8_t *)reply_status_base, size);
 
-					mfree(reply_status);
+					mfree(reply_status_base);
+					reply_status = 0;
+					reply_status_base = 0;
 
 				} break;
 
@@ -954,9 +965,9 @@ void App_data_prcoess(void)
 				{
 					uint8_t i = app_pack.payload[0];
 					//exit if the inquire mode value is more than upper limiting value
-					if (i > MODE_MAX)   break;
+					if (i > CURRENT_MODE_MAX)   break;
 
-					uint16_t len = mode_para_data[i].Chksum * 3 + PARA_PACK_HEADRE_BYTE;
+					uint16_t len = mode_para_data[i].ColorNum * 3 + PARA_PACK_HEADRE_BYTE;
 					uint8_t *src = (uint8_t *)&mode_para_data[i];
 					res_to_app(MODE_STATUS_ACK, (const uint8_t *)src, len);
 				}break;
@@ -1007,6 +1018,7 @@ void App_data_prcoess(void)
 
 					mode_para_data[i].Chksum = 0;
 					mode_para_data[i].Chksum = chksum_cal((uint8_t *)&mode_para_data[i], 8 + mode_para_data[i].ColorNum * 3);
+					mode_para_data[i].Chksum ^= mode_para_data[i].ColorVal;
 
 					//enable the function save the data to flash
 					enable_user_normal_flash_write();
@@ -1049,8 +1061,8 @@ void App_data_prcoess(void)
 					}
 
 					mode_para_data[i].Chksum = 0;
-					mode_para_data[i].ColorVal = COLOR_SELF;
 					mode_para_data[i].Chksum = chksum_cal((const uint8_t *)&mode_para_data[i], 8 + j * 3);
+					mode_para_data[i].Chksum ^= mode_para_data[i].ColorVal;
 
 					display_data.init = true;
 
@@ -1062,11 +1074,11 @@ void App_data_prcoess(void)
 
 				case SET_MODE_COLOR_CMD:
 				{
-					uint8_t   	mode = app_pack.payload[0];  //mode
+					uint8_t   	i = app_pack.payload[0];  //mode
 					uint8_t   	speed = app_pack.payload[1];  //
 					uint8_t		bright = app_pack.payload[2];
 					uint8_t		other = app_pack.payload[3];
-					if (mode > MODE_MAX && i != MUSIC_MODE)     break;    //overflow
+					if (i > MODE_MAX && i != MUSIC_MODE)     break;    //overflow
 					if (speed > PARA_SPEED_MAX)                 break;    //overflow
 					if (bright > PARA_BRIGHT_MAX)				break;
 					if (other > PARA_OTHER_MAX)					break;
@@ -1080,7 +1092,7 @@ void App_data_prcoess(void)
 					{
 						if (k < j)
 						{
-							uint8 l = k * 3 + 2;      //RGB->R inedex
+							uint8 l = k * 3 + 5;      //RGB->R inedex
 							mode_para_data[i].RcvColor[k].BufR = app_pack.payload[l];
 							mode_para_data[i].RcvColor[k].BufG = app_pack.payload[l+1];
 							mode_para_data[i].RcvColor[k].BufB = app_pack.payload[l+2];
@@ -1099,15 +1111,15 @@ void App_data_prcoess(void)
 					}
 
 					display_data.init = true;
-					display_data.mode_buf = mode;
-					display_data.mode= mode;
+					display_data.mode_buf = i;
+					display_data.mode= i;
 					mode_para_data[i].Speed = speed;
 					mode_para_data[i].Bright = bright;
 					mode_para_data[i].Other = other;
 
-					mode_para_data[mode].Chksum = 0;
-					mode_para_data[mode].ColorVal = COLOR_SELF;
-					mode_para_data[mode].Chksum = chksum_cal((const uint8_t *)&mode_para_data[mode], 8 + j * 3);
+					mode_para_data[i].Chksum = 0;
+					mode_para_data[i].Chksum = chksum_cal((const uint8_t *)&mode_para_data[i], 8 + j * 3);
+					mode_para_data[i].Chksum ^= mode_para_data[i].ColorVal;
 
 					//enable the function save the data to flash
 					enable_user_normal_flash_write();
@@ -1544,6 +1556,7 @@ void App_data_prcoess(void)
 						//caculate the new checksum
 						mode_para_data[i].Chksum = 0;
 						mode_para_data[i].Chksum = chksum_cal((const uint8_t *)&mode_para_data[i], 8 + j * 3);
+						mode_para_data[i].Chksum ^= mode_para_data[i].ColorVal;
 
 						//initialize the mode
 						display_data.init = true;
@@ -2013,16 +2026,6 @@ uint8_t Color_Value_Get(uint8_t ColorNumBuf)
 
   	return colorBuf;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
