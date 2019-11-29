@@ -51,8 +51,8 @@ void Display_Tree_Rainbow(void)
 
 		Para_Err_Check(&mode_para_data[RAINBOW]);
 
-		//BrightLevel = PARA_BRIGHT_MAX - ParaData[RAINBOW].Bright + 1;
-		BrightLevel=1;
+		BrightLevel = PARA_BRIGHT_MAX - mode_para_data[RAINBOW].Bright + 1;
+		//BrightLevel=1;
 
 		SpeedCtrl = 0;
 		OtherCtrl = 0;
@@ -177,8 +177,8 @@ void Display_Tree_Fade(void)
 
 		Para_Err_Check(&mode_para_data[FADE]);
 
-		//BrightLevel = PARA_BRIGHT_MAX - ParaData[FADE].Bright + 1;
-		BrightLevel=1;
+		BrightLevel = PARA_BRIGHT_MAX - mode_para_data[FADE].Bright + 1;
+		//BrightLevel=1;
 
 		TempColor = 0;
 		TempStep = 0;
@@ -309,8 +309,9 @@ void Display_Tree_Fade(void)
 			display_data.init = false;
 	
 			Para_Err_Check(&mode_para_data[SPARKLE]);
-	
-			BrightLevel = 1;
+
+			BrightLevel = PARA_BRIGHT_MAX - mode_para_data[SPARKLE].Bright + 1;
+			//BrightLevel = 1;
 	
 			SpeedCtrl = 0;
 			OtherCtrl = 0;
@@ -476,8 +477,8 @@ void Display_Tree_Snow(void)
 
 	    Para_Err_Check(&mode_para_data[SNOW]);
 	    
-	    //BrightLevel = PARA_BRIGHT_MAX - ParaData[SNOW].Bright + 1;
-		BrightLevel=1;
+	    BrightLevel = PARA_BRIGHT_MAX - mode_para_data[SNOW].Bright + 1;
+		//BrightLevel=1;
 		
 		SpeedCtrl = 0;
 	    OtherCtrl = 0;
@@ -608,7 +609,8 @@ void Display_Tree_Twinkle(void)
 
 		Para_Err_Check(&mode_para_data[TWINKLE]);
 
-		BrightLevel = 1;
+		BrightLevel = PARA_BRIGHT_MAX - mode_para_data[TWINKLE].Bright + 1;
+		//BrightLevel = 1;
 
 		SpeedCtrl = 0;
 		OtherCtrl = 0;
@@ -767,8 +769,8 @@ void Display_Tree_Fireworks(void)
     display_data.init = false;
     Para_Err_Check(&mode_para_data[FIREWORKS]);
   
-    //BrightLevel = PARA_BRIGHT_MAX - ParaData[FIREWORKS].Bright + 1;
-    BrightLevel=1;
+    BrightLevel = PARA_BRIGHT_MAX - mode_para_data[FIREWORKS].Bright + 1;
+    //BrightLevel=1;
 
     SpeedCtrl = 0;
     TempStep = 0;
@@ -903,8 +905,8 @@ void Display_Tree_Rolling(void)
 	if(display_data.init == true){	
     display_data.init = false;
     Para_Err_Check(&mode_para_data[ROLLING]);
-    //BrightLevel = PARA_BRIGHT_MAX - ParaData[ROLLING].Bright + 1;
-    BrightLevel=1;
+    BrightLevel = PARA_BRIGHT_MAX - mode_para_data[ROLLING].Bright + 1;
+    //BrightLevel=1;
     
 	SpeedCtrl = 0;
     OtherCtrl = 0;
@@ -1016,7 +1018,7 @@ void Display_Tree_Waves(void)
 
 		Para_Err_Check(&mode_para_data[WAVES]);
 
-		//BrightLevel = PARA_BRIGHT_MAX - ParaData[WAVES].Bright + 1;
+		//BrightLevel = PARA_BRIGHT_MAX - mode_para_data[WAVES].Bright + 1;
 		BrightLevel=1;
 
 		SpeedCtrl 	= 0;
@@ -1325,8 +1327,8 @@ void Display_Tree_Waves(void)
 
 		Para_Err_Check(&mode_para_data[WAVES]);
 
-		//BrightLevel = PARA_BRIGHT_MAX - ParaData[WAVES].Bright + 1;
-		BrightLevel=1;
+		BrightLevel = PARA_BRIGHT_MAX - mode_para_data[WAVES].Bright + 1;
+		//BrightLevel=1;
 
 		TempColor = 0;
 		TempStep = 0;
@@ -1470,8 +1472,8 @@ void Display_Tree_Updwn(void)
 
 		Para_Err_Check(&mode_para_data[UPDWN]);
 
-		//BrightLevel = PARA_BRIGHT_MAX - ParaData[UPDWN].Bright + 1;
-		BrightLevel=1;
+		BrightLevel = PARA_BRIGHT_MAX - mode_para_data[UPDWN].Bright + 1;
+		//BrightLevel=1;
 
 		SpeedCtrl 	= 0;
 		OtherCtrl 	= 0;
@@ -1658,8 +1660,8 @@ void Display_Tree_Glow(void)
 
 	    Para_Err_Check(&mode_para_data[GLOW]);
 	    
-	    //BrightLevel = PARA_BRIGHT_MAX - ParaData[GLOW].Bright + 1;
-	    BrightLevel=1;
+	    BrightLevel = PARA_BRIGHT_MAX - mode_para_data[GLOW].Bright + 1;
+	    //BrightLevel=1;
 	    
 		SpeedCtrl = 0;
 	    OtherCtrl = 0;
@@ -1764,8 +1766,8 @@ void Display_Tree_Color_Rand(void)
   if (display_data.init == true){
     display_data.init  = false;
     Para_Err_Check(&mode_para_data[COLOR_RAND]);
-    //BrightLevel = PARA_BRIGHT_MAX - ParaData[COLOR_RAND].Bright + 1;
-    BrightLevel=1;
+    BrightLevel = PARA_BRIGHT_MAX - mode_para_data[COLOR_RAND].Bright + 1;
+    //BrightLevel=1;
 
     SpeedCtrl = 0;
     OtherCtrl = mode_para_data[COLOR_RAND].Other;
@@ -1847,8 +1849,8 @@ void Display_Tree_Instead(void)
 		display_data.init = false;
 		Para_Err_Check(&mode_para_data[INSTEAD]);
 
-		//BrightLevel = PARA_BRIGHT_MAX - ParaData[INSTEAD].Bright + 1;
-		BrightLevel=1;
+		BrightLevel = PARA_BRIGHT_MAX - mode_para_data[INSTEAD].Bright + 1;
+		//BrightLevel=1;
 
 		ModeStep[0] = 0;
 		LedPickAll	= 0;
@@ -1979,8 +1981,8 @@ void Display_Tree_Carnival(void)
 	{
 		display_data.init  = false;
 		Para_Err_Check(&mode_para_data[CARNIVAL]);
-		//BrightLevel = PARA_BRIGHT_MAX - ParaData[CARNIVAL].Bright + 1;
-		BrightLevel=1;
+		BrightLevel = PARA_BRIGHT_MAX - mode_para_data[CARNIVAL].Bright + 1;
+		//BrightLevel=1;
 
 		SpeedCtrl = 0;
 
@@ -2090,8 +2092,8 @@ void Display_Tree_Alternate(void)
 
 	    Para_Err_Check(&mode_para_data[ALTERNATE]);
 	    
-	    //BrightLevel = PARA_BRIGHT_MAX - ParaData[ALTERNATE].Bright + 1;
-	    BrightLevel=1;
+	    BrightLevel = PARA_BRIGHT_MAX - mode_para_data[ALTERNATE].Bright + 1;
+	    //BrightLevel=1;
 	    
 		SpeedCtrl = 0;
 	    OtherCtrl = 0;
